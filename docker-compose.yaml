@@ -39,19 +39,21 @@ services:
   # Jupyter + PySpark
   # ============================================================
   jupyter:
-    image: quay.io/jupyter/pyspark-notebook
+    build:
+      context: .
+      dockerfile: docker/jupyter/Dockerfile
+
+    image: liora-jupyter-pyspark
     container_name: jupyter_pyspark
     restart: unless-stopped
-
     ports:
       - "8888:8888"
       - "4040:4040"
 
     volumes:
       - ./src/spark/notebooks:/home/jovyan/work
-      
     command: >
-      start-notebook.py 
+      start-notebook.py
       "--PasswordIdentityProvider.hashed_password=argon2:$$argon2id$$v=19$$m=10240,t=10,p=8$$/ow7txS+odVsD4ZqIP4Bnw$$V560bJDlDhBrK7xAYgjWReBHWu3IQoMuFDPal+3stfw"
 
   # ============================================================
