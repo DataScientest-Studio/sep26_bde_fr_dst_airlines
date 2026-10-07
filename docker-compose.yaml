@@ -1,0 +1,150 @@
+services:
+# ============================================================
+# PostgreSQL : Nous prenons la derniere version stable a date
+# ============================================================
+  database:
+    container_name: pg_container
+    image: postgres:18-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: To51xF4DBFQ7x78302Nk8SPLwp6S67ge
+      POSTGRES_DB: airline
+    ports:
+      - "5432:5432"
+    volumes:
+        - postgres_data:/var/lib/postgresql
+        - ./docker/postgres/init:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  # ============================================================
+  # PySpark : Nous utilisons plutot un docker que le tgz ce sera
+  #           plus pratique et plus "Data Engineer"
+  # ============================================================
+  #spark:
+  #  build:
+  #    context: .
+  #    dockerfile: docker/spark/Dockerfile
+
+  #  volumes:
+  #    - ./src/notebooks:/app/jobs
+      
+
+  # ============================================================
+  # Jupyter + PySpark
+  # ============================================================
+  jupyter:
+    image: quay.io/jupyter/pyspark-notebook
+    container_name: jupyter_pyspark
+    restart: unless-stopped
+
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+
+    volumes:
+      - ./src/spark/notebooks:/home/jovyan/work
+      
+    command: >
+      start-notebook.py 
+      "--PasswordIdentityProvider.hashed_password=argon2:$$argon2id$$v=19$$m=10240,t=10,p=8$$/ow7txS+odVsD4ZqIP4Bnw$$V560bJDlDhBrK7xAYgjWReBHWu3IQoMuFDPal+3stfw"
+
+  # ============================================================
+  # Airflow Init
+  # ============================================================
+  airflow-init:
+    image: apache/airflow:3.3.2
+
+    depends_on:
+      database:
+        condition: service_healthy
+        
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:HJqCh5uMtV19qUOXg47K6r08SsFwHHtk@database:5432/airflow
+
+    command: db migrate
+      
+
+    restart: "no"
+
+
+  # ============================================================
+  # Airflow Scheduler
+  # ============================================================
+  airflow-scheduler:
+    image: apache/airflow:3.3.2
+    container_name: airflow_scheduler
+    restart: unless-stopped
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+        
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:HJqCh5uMtV19qUOXg47K6r08SsFwHHtk@database:5432/airflow
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/config/passwords.json"
+      AIRFLOW__API_AUTH__JWT_SECRET: "9eTe5WrhUNbJxb4qJv9LUVPfmgkWM3NFKlI6ArA545YWfQdrK4"
+    volumes:
+      - ./src/airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - ./docker/airflow/passwords.json:/opt/airflow/config/passwords.json
+    command: scheduler
+
+
+  # ============================================================
+  # Airflow API Server / UI
+  # ============================================================
+  airflow-api-server:
+    image: apache/airflow:3.3.2
+    container_name: airflow_api_server
+    restart: unless-stopped
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+        
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:HJqCh5uMtV19qUOXg47K6r08SsFwHHtk@database:5432/airflow
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/config/passwords.json"
+      AIRFLOW__API_AUTH__JWT_SECRET: "9eTe5WrhUNbJxb4qJv9LUVPfmgkWM3NFKlI6ArA545YWfQdrK4"
+    volumes:
+      - ./src/airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - ./docker/airflow/passwords.json:/opt/airflow/config/passwords.json
+
+    command: api-server
+
+    ports:
+      - "8080:8080"
+
+  # ============================================================
+  # dbt
+  # ============================================================
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/dbt/Dockerfile
+
+    container_name: dbt
+
+    depends_on:
+      - database
+
+    volumes:
+      - ./src/dbt:/usr/app
+
+    working_dir: /usr/app
+
+    profiles:
+      - tools
+volumes:
+  postgres_data:
+  airflow_logs:
+

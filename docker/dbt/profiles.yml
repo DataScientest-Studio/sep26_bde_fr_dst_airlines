@@ -1,0 +1,18 @@
+dataplatform:
+
+  target: dev
+
+  outputs:
+    dev:
+      type: postgres
+
+      host: database
+      port: 5432
+
+      user: batch
+      password: M0woDa24FDEw4Kf3fDC62vyYo1fwb47x
+
+      dbname: airline
+      schema: public
+
+      threads: 2

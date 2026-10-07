@@ -1,0 +1,11 @@
+name: dataplatform
+version: "1.0.0"
+
+profile: dataplatform
+
+model-paths:
+- models
+
+models:
+  dataplatform:
+    +materialized: view
