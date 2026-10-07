@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - "compose.yaml"
+      - "docker-compose.yaml"
       - "docker/**"
       - ".github/workflows/deploy-docker.yml"
 
