@@ -161,4 +161,5 @@ services:
 volumes:
   postgres_data:
   airflow_logs:
+  portainer_data:
 
