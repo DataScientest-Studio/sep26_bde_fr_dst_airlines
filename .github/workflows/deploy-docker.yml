@@ -1,0 +1,40 @@
+name: Deploy Docker on GCP
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "compose.yaml"
+      - "docker/**"
+      - ".github/workflows/deploy-docker.yml"
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.GCP_VM_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy Docker Compose
+        run: |
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
+            set -e
+
+            cd /home/airline/repos
+
+            git pull origin main
+
+            docker compose up -d --build
+
+            docker compose ps
+          EOF
