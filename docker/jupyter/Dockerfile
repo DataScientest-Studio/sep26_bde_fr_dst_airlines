@@ -10,7 +10,8 @@ RUN pip install --no-cache-dir \
   sqlalchemy \
   psycopg2-binary \
   jupyterhub
-  
+
+
 # ------------------------------------------------
 # Configuration multi-utilisateur
 # ------------------------------------------------
@@ -31,6 +32,13 @@ RUN usermod -aG project-team herve_cyr && \
 # Configuration JupyterHub
 COPY docker/jupyter/jupyterhub_config.py /etc/jupyterhub/jupyterhub_config.py
 
+# Script de démarrage
+COPY docker/jupyter/start-jupyterhub.sh /usr/local/bin/start-jupyterhub.sh
+RUN chmod +x /usr/local/bin/start-jupyterhub.sh
+
 WORKDIR /home/jovyan/work
 
-CMD ["jupyterhub", "-f", "/etc/jupyterhub/jupyterhub_config.py"]
+# Le conteneur doit démarrer en root pour pouvoir exécuter chpasswd
+USER root
+
+CMD ["/usr/local/bin/start-jupyterhub.sh"]

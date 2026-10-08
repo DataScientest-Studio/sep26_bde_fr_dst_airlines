@@ -24,6 +24,16 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
           ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+      - name: Create Jupyter environment
+        env:
+          JUPYTER_PASSWORD_HERVE: ${{ secrets.JUPYTER_PASSWORD_HERVE }}
+          JUPYTER_PASSWORD_PASCAL: ${{ secrets.JUPYTER_PASSWORD_PASCAL }}
+        run: |
+          {
+            printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
+            printf 'JUPYTER_PASSWORD_PASCAL=%s\n' "$JUPYTER_PASSWORD_PASCAL"
+          } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            'cat > /home/airline/repos/.env && chmod 600 /home/airline/repos/.env'
 
       - name: Deploy Docker Compose
         run: |
