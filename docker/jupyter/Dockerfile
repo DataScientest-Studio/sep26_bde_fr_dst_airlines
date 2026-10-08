@@ -11,6 +11,13 @@ RUN pip install --no-cache-dir \
   psycopg2-binary \
   jupyterhub
 
+USER root
+
+# JupyterHub proxy
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nodejs npm && \
+    npm install -g configurable-http-proxy && \
+    rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------
 # Configuration multi-utilisateur
