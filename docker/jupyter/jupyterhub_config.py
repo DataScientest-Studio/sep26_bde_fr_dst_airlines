@@ -31,10 +31,14 @@ c.Authenticator.admin_users = {
 # --------------------------------------------------
 
 # Même workspace pour tous
-c.Spawner.notebook_dir = "/home/jovyan/work"
+#c.Spawner.notebook_dir = "/home/jovyan/work"
+c.Spawner.args = [
+    "--ServerApp.root_dir=/home/jovyan/work"
+]
 
 # Démarrer directement JupyterLab
 c.Spawner.default_url = "/lab"
 
 # Délai de démarrage
 c.Spawner.start_timeout = 60
+c.Spawner.http_timeout = 60
