@@ -50,6 +50,12 @@ services:
     
     user: root
     
+    entrypoint:
+      - /usr/bin/tini
+      - -g
+      - --
+      - /usr/local/bin/start-jupyterhub.sh
+    
     ports:
       - "8888:8888"
       - "4040:4040"
