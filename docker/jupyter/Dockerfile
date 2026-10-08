@@ -25,7 +25,11 @@ RUN apt-get update && \
 USER root
 
 # Groupe commun
-RUN groupadd -f project-team
+RUN if getent group project-team > /dev/null; then \
+        groupmod -g 1005 project-team; \
+    else \
+        groupadd -g 1005 project-team; \
+    fi
 
 # Utilisateurs
 RUN useradd -m -s /bin/bash herve_cyr && \
