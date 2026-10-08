@@ -47,6 +47,9 @@ services:
     image: liora-jupyter-pyspark
     container_name: jupyter_pyspark
     restart: unless-stopped
+    
+    user: root
+    
     ports:
       - "8888:8888"
       - "4040:4040"
