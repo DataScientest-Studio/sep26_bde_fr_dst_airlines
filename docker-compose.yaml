@@ -64,6 +64,8 @@ services:
       JUPYTER_PASSWORD_PASCAL: ${JUPYTER_PASSWORD_PASCAL}
     volumes:
       - ./src/spark/notebooks:/home/jovyan/work
+    security_opt:
+      - apparmor=unconfined
     #command: >
     #  start-notebook.py
     #  "--PasswordIdentityProvider.hashed_password=argon2:$$argon2id$$v=19$$m=10240,t=10,p=8$$/ow7txS+odVsD4ZqIP4Bnw$$V560bJDlDhBrK7xAYgjWReBHWu3IQoMuFDPal+3stfw"
