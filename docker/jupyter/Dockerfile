@@ -48,6 +48,8 @@ COPY docker/jupyter/start-jupyterhub.sh /usr/local/bin/start-jupyterhub.sh
 RUN chmod +x /usr/local/bin/start-jupyterhub.sh
 
 WORKDIR /home/jovyan/work
+RUN chgrp project-team /home/jovyan && \
+    chmod 2770 /home/jovyan
 
 # Le conteneur doit démarrer en root pour pouvoir exécuter chpasswd
 USER root
