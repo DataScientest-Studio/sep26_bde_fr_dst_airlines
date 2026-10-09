@@ -11,15 +11,13 @@ RUN wget -O \
   /opt/conda/lib/python3.13/site-packages/pyspark/jars/gcs-connector.jar \
   https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar
 
-USER ${NB_UID}
 
 RUN pip install --no-cache-dir \
   google-cloud-storage \
   sqlalchemy \
   psycopg2-binary \
   jupyterhub \
-  google-cloud-secret-manager \
-  pyspark
+  google-cloud-secret-manager
 
 USER root
 
