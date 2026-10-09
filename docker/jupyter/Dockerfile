@@ -16,7 +16,9 @@ RUN pip install --no-cache-dir \
   google-cloud-storage \
   sqlalchemy \
   psycopg2-binary \
-  jupyterhub
+  jupyterhub \
+  google-cloud-secret-manager \
+  pyspark
 
 USER root
 
