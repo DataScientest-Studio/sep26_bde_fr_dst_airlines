@@ -6,6 +6,7 @@ FROM quay.io/jupyter/pyspark-notebook
 USER root
 
 # connector pour Google storage
+RUN mkdir -p /opt/conda/lib/python3.13/site-packages/pyspark/jars
 RUN wget -O \
   /opt/conda/lib/python3.13/site-packages/pyspark/jars/gcs-connector.jar \
   https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar
