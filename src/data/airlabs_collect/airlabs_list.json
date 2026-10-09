@@ -1,0 +1,32 @@
+[
+	{ 
+		"desc":"schedules_to_orly", 
+		"url": "https://airlabs.co/api/v9/schedules", 
+		"pattern":"schedule_ory_{TIMESTAMPH}.csv",
+		"params" : { 
+			"arr_iata": "ORY",
+			"api_key": "{API_KEY}",
+			"limit":50
+		}
+	},
+	{ 
+		"desc":"schedules_to_cdg", 
+		"url": "https://airlabs.co/api/v9/schedules", 
+		"pattern":"schedule_cdg_{TIMESTAMPH}.csv",
+		"params" : { 
+			"arr_iata": "CDG",
+			"api_key": "{API_KEY}",
+			"limit":50
+		}
+	},
+	{ 
+		"desc":"schedules_to_bva", 
+		"url": "https://airlabs.co/api/v9/schedules", 
+		"pattern":"schedule_bva_{TIMESTAMPH}.csv",
+		"params" : { 
+			"arr_iata": "BVA",
+			"api_key": "{API_KEY}",
+			"limit":50
+		}
+	}
+]

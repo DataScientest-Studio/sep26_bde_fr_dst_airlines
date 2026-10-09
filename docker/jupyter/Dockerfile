@@ -3,6 +3,13 @@ FROM quay.io/jupyter/pyspark-notebook
 # ------------------------------------------------
 # Packages Python utilisés par les notebooks
 # ------------------------------------------------
+USER root
+
+# connector pour Google storage
+RUN wget \
+  -O /usr/local/spark/jars/gcs-connector.jar \
+  https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar
+
 USER ${NB_UID}
 
 RUN pip install --no-cache-dir \
