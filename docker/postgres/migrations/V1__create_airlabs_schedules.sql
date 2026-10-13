@@ -31,3 +31,7 @@ dep_time,
 arr_iata
 )
 );
+
+CREATE TABLE IF NOT EXISTS raw.airlines (
+
+)

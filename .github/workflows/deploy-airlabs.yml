@@ -1,0 +1,37 @@
+name: Deploy AirLabs Collector
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/data/airlabs_collect/**"
+      - "docker/airlabs/**"
+      - ".github/workflows/deploy-airlabs.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      # Ensuite :
+      # - authentification Docker vers Artifact Registry
+      # - docker build
+      # - docker push
+      # - mise à jour du Cloud Run Job

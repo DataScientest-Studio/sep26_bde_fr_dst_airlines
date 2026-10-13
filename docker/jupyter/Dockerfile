@@ -8,6 +8,7 @@ USER root
 
 
 RUN pip install --no-cache-dir \
+  pyspark \
   google-cloud-storage \
   sqlalchemy \
   psycopg2-binary \
