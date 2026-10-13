@@ -1,0 +1,12 @@
+airline:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: pg_container
+      user: batch
+      password: M0woDa24FDEw4Kf3fDC62vyYo1fwb47x
+      port: 5432
+      dbname: airline
+      schema: silver
+      threads: 1
