@@ -28,6 +28,9 @@ RUN mkdir -p /opt/spark-extra-jars
 
 RUN wget -O /opt/spark-extra-jars/gcs-connector.jar \
  https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar
+ 
+RUN wget -O /opt/spark-extra-jars/gcs-connector.jar \
+ wget https://jdbc.postgresql.org/download/postgresql-42.7.8.jar
 
 
 # ------------------------------------------------
