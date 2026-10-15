@@ -34,6 +34,11 @@ def main():
     .config("spark.hadoop.fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
     .getOrCreate()
 )
+    hconf = spark.sparkContext._jsc.hadoopConfiguration()
+    hconf.set("fs.gs.block.size", "67108864")
+    hconf.set("fs.gs.outputstream.buffer.size", "8388608")
+    hconf.set("fs.gs.inputstream.inplace.seek.limit", "8388608")
+    hconf.set("fs.gs.inputstream.min.range.request.size", "2097152")
 
 
     fichiers = telecharger(args.months, "/tmp/opdi")
