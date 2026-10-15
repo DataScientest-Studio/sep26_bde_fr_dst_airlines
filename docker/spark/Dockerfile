@@ -1,4 +1,7 @@
-FROM jupyter/pyspark-notebook:latest
+#
+# Docker Spark / Python / ML
+#
+FROM apache/spark:latest
 
 USER root
 
@@ -20,12 +23,19 @@ RUN wget \
 
 # Dépendances Python
 RUN pip install --no-cache-dir \
+    pandas \
+    numpy \
+    scikit-learn \
+    xgboost \
+    mlflow \
+    psycopg2-binary \
     google-cloud-storage \
     google-cloud-secret-manager \
-    psycopg2-binary \
-    mlflow \
-    xgboost \
     pyarrow \
     requests
 
-USER ${NB_UID}
+ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
+
+WORKDIR /app
+
+CMD ["/bin/bash"]

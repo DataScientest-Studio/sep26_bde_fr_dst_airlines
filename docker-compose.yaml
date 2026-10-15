@@ -24,17 +24,18 @@ services:
       retries: 5
   
   # ============================================================
-  # PySpark : Nous utilisons plutot un docker que le tgz ce sera
-  #           plus pratique et plus "Data Engineer"
+  # Spark & ML : Nous utilisons plutot un docker que le tgz ce sera
+  #              plus pratique et plus "Data Engineer"
   # ============================================================
-  #spark:
-  #  build:
-  #    context: .
-  #    dockerfile: docker/spark/Dockerfile
+  spark:
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
 
-  #  volumes:
-  #    - ./src/notebooks:/app/jobs
-      
+    volumes:
+      - ./src/notebooks:/app/jobs
+      - ./src/spark:/app/src
+      - /home/airline/workspace/spark:/app/workspace
 
   # ============================================================
   # Jupyter + PySpark
@@ -63,7 +64,7 @@ services:
       JUPYTER_PASSWORD_HERVE: ${JUPYTER_PASSWORD_HERVE}
       JUPYTER_PASSWORD_PASCAL: ${JUPYTER_PASSWORD_PASCAL}
     volumes:
-      - /home/airline/workspace/jupyter/notebooks:/home/jovyan/work
+      - /home/airline/workspace/jupyter/notebooks:/home/jovyan/work    # Workspace tored on VM outside repos structure
 
     #command: >
     #  start-notebook.py
@@ -173,8 +174,38 @@ services:
 
     profiles:
       - tools
+
+# ============================================================
+  # ML Flow
+  # ============================================================
+  mlflow:
+    build:
+      context: .
+      dockerfile: /docker/mlflow/Dockerfile
+
+    container_name: mlflow
+    
+    ports:
+      - "5000:5000"
+    
+    depends_on:
+      - postgres
+    
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://admin:admin@postgres:5432/mlflow
+      --default-artifact-root /mlflow/artifacts
+    
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+
+
 volumes:
   postgres_data:
   airflow_logs:
   portainer_data:
+  mlflow_artifacts:
+
 
