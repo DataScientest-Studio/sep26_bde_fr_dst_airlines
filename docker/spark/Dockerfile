@@ -39,4 +39,4 @@ ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 ENV RUN_ENV=docker
 WORKDIR /app
 
-CMD ["/bin/bash"]
+CMD ["spark-submit", "--version"]

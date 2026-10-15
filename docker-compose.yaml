@@ -32,7 +32,7 @@ services:
       context: .
       dockerfile: docker/spark/Dockerfile
     container_name: spark
-    restart: unless-stopped
+    restart: no
     volumes:
       - ./src/notebooks:/app/jobs
       - ./src/spark:/app/src
