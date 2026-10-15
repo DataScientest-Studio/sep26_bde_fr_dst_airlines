@@ -32,7 +32,8 @@ RUN pip install --no-cache-dir \
     google-cloud-storage \
     google-cloud-secret-manager \
     pyarrow \
-    requests
+    requests \
+    debugpy
 
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 
