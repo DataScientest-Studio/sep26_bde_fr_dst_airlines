@@ -63,7 +63,7 @@ services:
       JUPYTER_PASSWORD_HERVE: ${JUPYTER_PASSWORD_HERVE}
       JUPYTER_PASSWORD_PASCAL: ${JUPYTER_PASSWORD_PASCAL}
     volumes:
-      - ./src/spark/notebooks:/home/jovyan/work
+      - /home/airline/workspace/jupyter/notebooks:/home/jovyan/work
 
     #command: >
     #  start-notebook.py
