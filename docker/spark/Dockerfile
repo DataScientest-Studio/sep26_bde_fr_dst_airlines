@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir \
     debugpy
 
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
-
+ENV RUN_ENV=docker
 WORKDIR /app
 
 CMD ["/bin/bash"]
