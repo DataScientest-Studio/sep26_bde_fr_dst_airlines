@@ -181,7 +181,7 @@ services:
   mlflow:
     build:
       context: .
-      dockerfile: /docker/mlflow/Dockerfile
+      dockerfile: docker/mlflow/Dockerfile
 
     container_name: mlflow
     
