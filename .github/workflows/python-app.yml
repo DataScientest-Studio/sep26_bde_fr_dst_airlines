@@ -6,9 +6,14 @@ name: Python application
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - "/src"
+  
   pull_request:
     branches: [ "master" ]
-
+    paths:
+      - "/src"
+      
 permissions:
   contents: read
 
@@ -37,3 +42,19 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Configure SSH
+      run: |
+        mkdir -p ~/.ssh
+
+        echo "${{ secrets.GCP_VM_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+
+        ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+    
+    - name: Gt last Sources
+      run: |
+        ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
+          set -e
+          cd /home/airline/repos
+          git pull origin master
+        EOF
