@@ -1,0 +1,13 @@
+{
+    "BUCKET": "liora-airline-project",
+    "PREFIX": "raw/airlabs",
+    "PREFIX_LOADED": "raw/processed/airlabs",
+    "PG_HOST": "database",
+    "PG_PORT": "5432",
+    "PG_DB": "airline",
+    "PG_USER": "batch",
+    "TARGET_TABLES": { "AIRLABS_SCHEDULES": "raw.airlabs_schedules"},
+    "SECRETS_PREFIX":"projects/531392170598/secrets/",
+    "SECRETS" : ["AIRLINEBUCKET_CREDENTIALS", "AIRLINEDB_PASSWORD"],
+    "GCP_PROJECT" : "project-0845983d-30e1-47a7-a62"
+}
