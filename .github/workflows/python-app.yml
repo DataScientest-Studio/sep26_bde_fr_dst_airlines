@@ -8,11 +8,13 @@ on:
     branches: [ "master" ]
     paths:
       - 'src/**'
+      - ".github/workflows/python-app.yml"
   
   pull_request:
     branches: [ "master" ]
     paths:
       - 'src/**'
+      - ".github/workflows/python-app.yml"
       
 permissions:
   contents: read
