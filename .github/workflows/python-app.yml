@@ -56,5 +56,7 @@ jobs:
         ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
           set -e
           cd /home/airline/repos
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git pull origin master
         EOF
