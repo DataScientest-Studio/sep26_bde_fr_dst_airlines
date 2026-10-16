@@ -111,6 +111,7 @@ services:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - ./docker/airflow/passwords.json:/opt/airflow/config/passwords.json
+      - /var/run/docker.sock:/var/run/docker.sock 
     command: scheduler
 
 
