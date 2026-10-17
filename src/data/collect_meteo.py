@@ -7,15 +7,15 @@ import pandas as pd
 import requests
 from google.cloud import storage
 
-# --- Paramètres ---
+# --- Parameters ---
 URL = "https://archive-api.open-meteo.com/v1/archive"
 START_DATE = "2025-08-01"
 END_DATE = "2026-07-31"
 PAUSE_S = 30
-ATTENTE_429_S = 60
+WAIT_429_S = 60
 MAX_429 = 3
-BUCKET = "liora-airline-project"           
-PREFIX = "raw/meteo"                       
+BUCKET = "liora-airline-project"
+PREFIX = "raw/meteo"
 
 PARAMS = {
     "start_date": START_DATE,
@@ -29,21 +29,21 @@ PARAMS = {
 
 
 def main():
-    parser = argparse.ArgumentParser()                                      
+    parser = argparse.ArgumentParser()
     parser.add_argument("--airports-file", required=True, help="CSV icao, latitude_deg, longitude_deg")
     args = parser.parse_args()
 
-    bucket = storage.Client().bucket(BUCKET)                                
+    bucket = storage.Client().bucket(BUCKET)
 
-    aeroports = pd.read_csv(args.airports_file)
-    sans_coord = aeroports["latitude_deg"].isna() | aeroports["longitude_deg"].isna()
-    print(f"Aéroports sans coordonnées (ignorés) : {sans_coord.sum()}")
-    aeroports = aeroports[~sans_coord]
+    airports = pd.read_csv(args.airports_file)
+    no_coords = airports["latitude_deg"].isna() | airports["longitude_deg"].isna()
+    print(f"Airports without coordinates (skipped): {no_coords.sum()}")
+    airports = airports[~no_coords]
 
-    echecs_429 = 0
-    for row in aeroports.itertuples(index=False):
-        blob = bucket.blob(f"{PREFIX}/{row.icao}.parquet")                  
-        if blob.exists():                                                   
+    failures_429 = 0
+    for row in airports.itertuples(index=False):
+        blob = bucket.blob(f"{PREFIX}/{row.icao}.parquet")
+        if blob.exists():
             continue
 
         params = PARAMS.copy()
@@ -52,44 +52,40 @@ def main():
         try:
             r = requests.get(URL, params=params, timeout=60)
         except requests.RequestException as e:
-            print(f"{datetime.now():%H:%M:%S} {row.icao} erreur réseau : {e}")
+            print(f"{datetime.now():%H:%M:%S} {row.icao} network error: {e}")
             continue
 
         if r.status_code == 200:
             try:
                 df = pd.DataFrame(r.json()["hourly"])
             except (ValueError, KeyError):
-                print(f"{datetime.now():%H:%M:%S} {row.icao} réponse vide ou invalide")
+                print(f"{datetime.now():%H:%M:%S} {row.icao} empty or invalid response")
                 time.sleep(PAUSE_S)
                 continue
             df["icao"] = row.icao
-            with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:    
+            with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp:
                 df.to_parquet(tmp.name, index=False)
                 blob.upload_from_filename(tmp.name)
-            echecs_429 = 0
+            failures_429 = 0
             print(f"{datetime.now():%H:%M:%S} {row.icao} OK")
         elif r.status_code == 429:
-            echecs_429 += 1
+            failures_429 += 1
             print(r.text)
-            if echecs_429 >= MAX_429:
-                print(f"{MAX_429} refus d'affilée : quota du jour atteint, relance demain")
+            if failures_429 >= MAX_429:
+                print(f"{MAX_429} refusals in a row: daily quota reached, run again tomorrow")
                 break
-            print(f"{datetime.now():%H:%M:%S} {row.icao} refusé (429), attente {ATTENTE_429_S} s")
-            time.sleep(ATTENTE_429_S)
+            print(f"{datetime.now():%H:%M:%S} {row.icao} refused (429), waiting {WAIT_429_S} s")
+            time.sleep(WAIT_429_S)
         else:
-            print(f"{datetime.now():%H:%M:%S} {row.icao} erreur {r.status_code}")
+            print(f"{datetime.now():%H:%M:%S} {row.icao} error {r.status_code}")
 
         time.sleep(PAUSE_S)
 
-    # --- Bilan ---                                                          # MODIF : bilan sur le bucket
-    faits = {b.name.split("/")[-1].removesuffix(".parquet") for b in bucket.list_blobs(prefix=PREFIX)}
-    restants = sorted(set(aeroports["icao"]) - faits)
-    print(f"Récupérés : {len(faits)} / {len(aeroports)}")
-    if restants:
-        print(f"Restants ({len(restants)}) : {', '.join(restants[:20])}{' ...' if len(restants) > 20 else ''}")
+    # --- Summary (based on the bucket) ---
+    done = {b.name.split("/")[-1].removesuffix(".parquet") for b in bucket.list_blobs(prefix=PREFIX)}
+    remaining = sorted(set(airports["icao"]) - done)
+    print(f"Retrieved: {len(done)} / {len(airports)}")
+    if remaining:
+        print(f"Remaining ({len(remaining)}): {', '.join(remaining[:20])}{' ...' if len(remaining) > 20 else ''}")
     else:
-        print("Collecte complète")
-
-
-if __name__ == "__main__":
-    main()
+        print("Collection complete")
