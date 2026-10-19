@@ -1,11 +1,8 @@
-FROM ghcr.io/dbt-labs/dbt-postgres:1.10.0
+FROM python:3.13-slim
 
-WORKDIR /app
+WORKDIR /usr/app
 
-COPY . /app
+RUN pip install --no-cache-dir \
+    dbt-core \
+    dbt-postgres
 
-COPY docker/dbt/entrypoint.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
