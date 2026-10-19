@@ -46,7 +46,7 @@ jobs:
         run: |
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << EOF
             mkdir -p /home/airline/repos/docker/airflow
-
+            rm -rf /home/airline/repos/docker/airflow/passwords.json
             cat > /home/airline/repos/docker/airflow/passwords.json << JSON
             $AIRFLOW_PASSWORDS
             JSON
