@@ -107,14 +107,14 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW_DB_CONN}
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
-      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/config/passwords.json"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
     volumes:
       # Les dag seront dans src/airflow/dag et seront donc deployés via git
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       # Recupere les mdp des secrets github et les ecrits
-      - ./docker/airflow/passwords.json:/opt/airflow/config/passwords.json:ro
+      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json:ro
       # Permet au conteneur Airflow d'accéder au démon Docker de l'hôte
       # Nécessaire pour exécuter des commandes docker exec, docker run, etc.
       - /var/run/docker.sock:/var/run/docker.sock 
