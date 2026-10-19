@@ -41,10 +41,17 @@ jobs:
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 600 /home/airline/repos/.env'
       - name: Create Airflow passwords file
+        env:
+          AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
         run: |
-          mkdir -p docker/airflow
-          cat > docker/airflow/passwords.json <<EOF
-          ${{ secrets.AIRFLOW_PASSWORDS }}
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << EOF
+            mkdir -p /home/airline/repos/docker/airflow
+
+            cat > /home/airline/repos/docker/airflow/passwords.json << JSON
+            $AIRFLOW_PASSWORDS
+            JSON
+
+            chmod 600 /home/airline/repos/docker/airflow/passwords.json
           EOF
       - name: Deploy Docker Compose
         run: |
