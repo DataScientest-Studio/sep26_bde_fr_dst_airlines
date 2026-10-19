@@ -78,7 +78,7 @@ def read_input(bucket_name, prefix, gcp_project, use_temp_file:bool=False):
                 if df is None:
                     df=dff
                 else:
-                    df = df.unionByName(dff)
+                    df = df.unionByName(dff, allowMissingColumns=True)
                 if dff is not None:
                     print(f"     {dff.count()} row(s) loaded")
                     files.append(blob.name)
