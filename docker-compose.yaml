@@ -109,6 +109,7 @@ services:
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow_api_server:8080/execution/"
     volumes:
       # Les dag seront dans src/airflow/dag et seront donc deployés via git
       - ./src/airflow/dags:/opt/airflow/dags
@@ -138,6 +139,7 @@ services:
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow_api_server:8080/execution/"
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
@@ -162,6 +164,7 @@ services:
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
       AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow_api_server:8080/execution/"
 
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
