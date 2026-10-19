@@ -8,7 +8,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: To51xF4DBFQ7x78302Nk8SPLwp6S67ge
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
       POSTGRES_DB: airline
     ports:
       - "5432:5432"
@@ -18,7 +18,7 @@ services:
 
         
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d airflow"]
+      test: ["CMD-SHELL", "pg_isready -U admin  -d airflow"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -114,7 +114,7 @@ services:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       # Recupere les mdp des secrets github et les ecrits
-      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json:ro
+      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json
       # Permet au conteneur Airflow d'accéder au démon Docker de l'hôte
       # Nécessaire pour exécuter des commandes docker exec, docker run, etc.
       - /var/run/docker.sock:/var/run/docker.sock 
@@ -134,14 +134,14 @@ services:
         condition: service_completed_successfully
         
     environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:HJqCh5uMtV19qUOXg47K6r08SsFwHHtk@database:5432/airflow
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW_DB_CONN}
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
-      AIRFLOW__API_AUTH__JWT_SECRET: "9eTe5WrhUNbJxb4qJv9LUVPfmgkWM3NFKlI6ArA545YWfQdrK4"
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
-      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json:ro
+      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json
 
     command: api-server
 
@@ -194,32 +194,32 @@ services:
     profiles:
       - tools
 
-# ============================================================
+  # ============================================================
   # ML Flow
   # ============================================================
-  mlflow:
-    build:
-      context: .
-      dockerfile: docker/mlflow/Dockerfile
+  # mlflow:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/mlflow/Dockerfile
 
-    container_name: mlflow
+  #   container_name: mlflow
     
-    ports:
-      - "5000:5000"
+  #   ports:
+  #     - "5000:5000"
     
-    depends_on:
-      - database
+  #   depends_on:
+  #     - database
         
     
-    command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 5000
-      --backend-store-uri postgresql://admin:admin@postgres:5432/mlflow
-      --default-artifact-root /mlflow/artifacts
+  #   command: >
+  #     mlflow server
+  #     --host 0.0.0.0
+  #     --port 5000
+  #     --backend-store-uri postgresql://admin:admin@postgres:5432/mlflow
+  #     --default-artifact-root /mlflow/artifacts
     
-    volumes:
-      - mlflow_artifacts:/mlflow/artifacts
+  #   volumes:
+  #     - mlflow_artifacts:/mlflow/artifacts
 
 
 volumes:
