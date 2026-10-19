@@ -20,7 +20,8 @@ with DAG(
         task_id="run_airlabs_ingestion",
         bash_command="""
         docker exec spark \
-            /opt/spark/bin/spark-submit \
-            /app/src/notebooks/ingestion/load_airlabs_schedule_files.py
+        /opt/spark/bin/spark-submit \
+        --jars /opt/spark-extra-jars/gcs-connector.jar,/opt/spark-extra-jars/postgresql.jar \
+        /app/src/notebooks/ingestion/load_airlabs_schedule_files.py
         """
     )
