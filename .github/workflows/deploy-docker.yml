@@ -28,10 +28,16 @@ jobs:
         env:
           JUPYTER_PASSWORD_HERVE: ${{ secrets.JUPYTER_PASSWORD_HERVE }}
           JUPYTER_PASSWORD_PASCAL: ${{ secrets.JUPYTER_PASSWORD_PASCAL }}
+          AIRFLOW_DB_CONN: ${{ secrets.AIRFLOW_DB_CONN }}
+          AIRFLOW_JWT_SECRET: ${{ secrets.AIRFLOW_JWT_SECRET }}
+          DBT_BATCH_PASSWORD: ${{ secrets.DBT_BATCH_PASSWORD }}
         run: |
           {
             printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
             printf 'JUPYTER_PASSWORD_PASCAL=%s\n' "$JUPYTER_PASSWORD_PASCAL"
+            printf 'AIRFLOW_DB_CONN=%s\n' "$AIRFLOW_DB_CONN"
+            printf 'AIRFLOW_JWT_SECRET=%s\n' "$AIRFLOW_JWT_SECRET"
+            printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 600 /home/airline/repos/.env'
       - name: Create Airflow passwords file
