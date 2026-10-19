@@ -1,7 +1,7 @@
 #
 # Docker Spark / Python / ML
 #
-FROM apache/spark:latest
+FROM apache/spark:4.0.1
 
 USER root
 
@@ -33,11 +33,10 @@ RUN pip install --no-cache-dir \
     google-cloud-secret-manager \
     pyarrow \
     requests \
-    debugpy \
-    pytest-pythonpath
+    debugpy 
 
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 ENV RUN_ENV=docker
 WORKDIR /app
 
-CMD ["spark-submit", "--version"]
+CMD ["tail", "-f", "/dev/null"]
