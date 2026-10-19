@@ -44,7 +44,7 @@ jobs:
         env:
           AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
         run: |
-          echo "$AIRFLOW_PASSWORDS" | base64 -w0 | \
+          echo "$AIRFLOW_PASSWORDS" | \
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
             mkdir -p /home/airline/repos/docker/airflow
             rm -rf /home/airline/repos/docker/airflow/passwords.json
