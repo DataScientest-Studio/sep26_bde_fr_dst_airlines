@@ -5,8 +5,8 @@ models:
   - name: stg_flights
     description: "List of Flights from Airlabs Schedules"
     columns:
-      - name: composerId
-        description: "ID of Composer"
+      - name: flight_id
+        description: "ID of Flight (for one hour when recycled)"
         tests:
           - unique
           - not_null
