@@ -4,27 +4,27 @@ import os
 import requests
 from pyspark.sql import SparkSession
 
-URL_OPDI = "https://www.eurocontrol.int/performance/data/download/OPDI/v002/flight_list/flight_list_{mois}.parquet"
+URL_OPDI = "https://www.eurocontrol.int/performance/data/download/OPDI/v002/flight_list/flight_list_{month}.parquet"
 
 
-def telecharger(months, dossier):
-    """Télécharge chaque mois dans `dossier` et renvoie la liste des fichiers."""
-    os.makedirs(dossier, exist_ok=True)
-    fichiers = []
-    for mois in months:
-        chemin = os.path.join(dossier, f"flight_list_{mois}.parquet")
-        r = requests.get(URL_OPDI.format(mois=mois), timeout=300)
+def download(months, directory):
+    """Download each month into `directory` and return the list of files."""
+    os.makedirs(directory, exist_ok=True)
+    files = []
+    for month in months:
+        path = os.path.join(directory, f"flight_list_{month}.parquet")
+        r = requests.get(URL_OPDI.format(month=month), timeout=300)
         r.raise_for_status()
-        with open(chemin, "wb") as f:
+        with open(path, "wb") as f:
             f.write(r.content)
-        print(f"{mois} : {len(r.content) / 1e6:.0f} Mo")
-        fichiers.append(chemin)
-    return fichiers
+        print(f"{month}: {len(r.content) / 1e6:.0f} MB")
+        files.append(path)
+    return files
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--months", nargs="+", required=True, help="Mois AAAAMM, ex. 202508 202509")
+    parser.add_argument("--months", nargs="+", required=True, help="Months YYYYMM, e.g. 202508 202509")
     args = parser.parse_args()
 
     spark = (
@@ -40,13 +40,13 @@ def main():
     hconf.set("fs.gs.inputstream.inplace.seek.limit", "8388608")
     hconf.set("fs.gs.inputstream.min.range.request.size", "2097152")
 
-    fichiers = telecharger(args.months, "/tmp/opdi")
+    files = download(args.months, "/tmp/opdi")
 
-    for mois, fichier in zip(args.months, fichiers):
-        df = spark.read.parquet(fichier)
-        destination = f"gs://liora-airline-project/raw/opdi/mois={mois}/"
+    for month, file in zip(args.months, files):
+        df = spark.read.parquet(file)
+        destination = f"gs://liora-airline-project/raw/opdi/mois={month}/"
         df.write.mode("overwrite").parquet(destination)
-        print(f"{mois} : {df.count()} lignes écrites dans {destination}")
+        print(f"{month}: {df.count()} rows written to {destination}")
 
 
 if __name__ == "__main__":
