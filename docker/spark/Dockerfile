@@ -33,7 +33,10 @@ RUN pip install --no-cache-dir \
     google-cloud-secret-manager \
     pyarrow \
     requests \
-    debugpy 
+    debugpy \
+    onnx \
+    skl2onnx \
+    onnxruntime 
 
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 ENV RUN_ENV=docker
