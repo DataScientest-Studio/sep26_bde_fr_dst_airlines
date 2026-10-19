@@ -41,7 +41,7 @@ jobs:
             printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
             printf 'PG_ADMIN_PASSWORD=%s\n' "$PG_ADMIN_PASSWORD"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
-            'cat > /home/airline/repos/.env && chmod 600 /home/airline/repos/.env'
+            'cat > /home/airline/repos/.env && chmod 660 /home/airline/repos/.env'
       - name: Create Airflow passwords file
         env:
           AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
