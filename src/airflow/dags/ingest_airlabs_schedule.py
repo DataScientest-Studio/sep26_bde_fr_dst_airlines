@@ -11,7 +11,7 @@ from airflow.providers.standard.operators.bash import BashOperator
 with DAG(
     dag_id="ingest_airlabs_schedule",
     start_date=datetime(2026, 10, 16),
-    schedule="@daily",
+    schedule="30 8,14,20 * * *",
     catchup=False,
     tags=["airlabs"],
 ) as dag:
