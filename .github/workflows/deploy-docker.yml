@@ -50,6 +50,7 @@ jobs:
             rm -rf /home/airline/repos/docker/airflow/passwords.json
             cat > /home/airline/repos/docker/airflow/passwords.json
             chmod 600 /home/airline/repos/docker/airflow/passwords.json
+          '
       - name: Deploy Docker Compose
         run: |
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
