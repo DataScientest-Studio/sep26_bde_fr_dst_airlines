@@ -33,7 +33,8 @@ RUN pip install --no-cache-dir \
     google-cloud-secret-manager \
     pyarrow \
     requests \
-    debugpy
+    debugpy \
+    pytest-pythonpath
 
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 ENV RUN_ENV=docker

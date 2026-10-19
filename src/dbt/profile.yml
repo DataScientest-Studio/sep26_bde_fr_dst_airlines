@@ -5,7 +5,7 @@ airline:
       type: postgres
       host: pg_container
       user: batch
-      password: M0woDa24FDEw4Kf3fDC62vyYo1fwb47x
+      password: "{{ env_var('DBT_PASSWORD') }}"
       port: 5432
       dbname: airline
       schema: silver

@@ -34,7 +34,12 @@ jobs:
             printf 'JUPYTER_PASSWORD_PASCAL=%s\n' "$JUPYTER_PASSWORD_PASCAL"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 600 /home/airline/repos/.env'
-
+      - name: Create Airflow passwords file
+        run: |
+          mkdir -p docker/airflow
+          cat > docker/airflow/passwords.json <<EOF
+          ${{ secrets.AIRFLOW_PASSWORDS }}
+          EOF
       - name: Deploy Docker Compose
         run: |
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
