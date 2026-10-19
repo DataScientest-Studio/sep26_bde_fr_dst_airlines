@@ -10,6 +10,7 @@ final as (
 
 
     SELECT DISTINCT 
+        ROW_NUMBER() OVER (ORDER BY flight_icao,dep_iata,arr_iata,dep_hour) AS flight_id,
 		flight_icao,
         airline_icao,
         flight_number,
