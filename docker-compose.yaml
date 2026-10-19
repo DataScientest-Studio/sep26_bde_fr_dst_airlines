@@ -97,7 +97,7 @@ services:
     image: apache/airflow:3.3.2
     container_name: airflow_scheduler
     restart: unless-stopped
-    user: root
+
     group_add:
     - "1001"
     depends_on:
