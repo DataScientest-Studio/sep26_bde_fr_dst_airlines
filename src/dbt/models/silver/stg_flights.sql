@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+{{ config(materialized='table', schema='silver') }}
 
 with Schedule as (
     select a.*,    

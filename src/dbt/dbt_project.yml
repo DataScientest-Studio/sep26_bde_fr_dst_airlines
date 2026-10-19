@@ -9,3 +9,9 @@ model-paths:
 models:
   dataplatform:
     +materialized: view
+    raw:
+      +schema: raw
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold
