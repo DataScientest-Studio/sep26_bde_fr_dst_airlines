@@ -49,7 +49,8 @@ jobs:
             mkdir -p /home/airline/repos/docker/airflow
             rm -rf /home/airline/repos/docker/airflow/passwords.json
             cat > /home/airline/repos/docker/airflow/passwords.json
-            chmod 600 /home/airline/repos/docker/airflow/passwords.json
+            chown 50000:0 /home/airline/repos/docker/airflow/passwords.json
+            chmod 640 /home/airline/repos/docker/airflow/passwords.json
           '
       - name: Deploy Docker Compose
         run: |

@@ -136,12 +136,12 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:HJqCh5uMtV19qUOXg47K6r08SsFwHHtk@database:5432/airflow
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "herve:admin,pascal:admin"
-      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/config/passwords.json"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: "/opt/airflow/passwords.json"
       AIRFLOW__API_AUTH__JWT_SECRET: "9eTe5WrhUNbJxb4qJv9LUVPfmgkWM3NFKlI6ArA545YWfQdrK4"
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
-      - ./docker/airflow/passwords.json:/opt/airflow/config/passwords.json
+      - ./docker/airflow/passwords.json:/opt/airflow/passwords.json:ro
 
     command: api-server
 
