@@ -46,15 +46,16 @@ jobs:
         env:
           AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
         run: |
-          echo "$AIRFLOW_PASSWORDS" | \
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
             mkdir -p /home/airline/repos/docker/airflow
             rm -rf /home/airline/repos/docker/airflow/passwords.json
-            
-            cat > /home/airline/repos/docker/airflow/passwords.json
-            
+          '  
+          echo "$AIRFLOW_PASSWORDS" | \
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            "cat > /home/airline/repos/docker/airflow/passwords.json"
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
             chown 50000:0 /home/airline/repos/docker/airflow/passwords.json
-            chmod 644 /home/airline/repos/docker/airflow/passwords.json
+            chmod 666 /home/airline/repos/docker/airflow/passwords.json
 
             ls -l /home/airline/repos/docker/airflow/passwords.json
           '
