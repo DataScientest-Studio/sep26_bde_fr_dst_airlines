@@ -1,7 +1,7 @@
 name: airline_platform
 version: "1.0.0"
 
-profile: airline
+profile: dataplatform
 
 model-paths:
 - models

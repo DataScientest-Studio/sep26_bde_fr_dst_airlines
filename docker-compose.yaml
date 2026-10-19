@@ -199,7 +199,7 @@ services:
     
     environment:
       DBT_PASSWORD: ${DBT_BATCH_PASSWORD}
-      DBT_HOST: pg_container
+      DBT_HOST: database
       DBT_USER: batch
       DBT_PORT: 5432
       DBT_DATABASE: airline
