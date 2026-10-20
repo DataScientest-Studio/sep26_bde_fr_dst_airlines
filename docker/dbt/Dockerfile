@@ -13,3 +13,5 @@ RUN pip install --no-cache-dir \
     dbt-postgres
 
 WORKDIR /usr/app
+
+RUN dbt deps

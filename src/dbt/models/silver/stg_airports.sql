@@ -1,9 +1,12 @@
-###############################################
-# raw.airlabs_airports -> silver.stg_airports
-###############################################
+--###############################################
+--# raw.airlabs_airports -> silver.stg_airports
+--###############################################
 
-{{ config(schema='silver',materialized='incremental',
-        unique_key='airport_id',) }}
+{{ config(materialized='incremental',
+        unique_key='airport_id',
+        post_hook=[
+      "CREATE INDEX IF NOT EXISTS idx_stg_airports_icao ON {{ this }} (icao_code)"
+    ]) }}
 
 with Airports as (
     select *

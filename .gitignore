@@ -90,4 +90,5 @@ logs
 
 # Mypy cache
 .mypy_cache/
-src/data/data/raw/schedule_bva_2026100819.csv
+src/data/data/raw/
+src/dbt/dbt_packages/

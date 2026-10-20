@@ -1,9 +1,11 @@
-###############################################
-# raw.airlabs_airlines -> silver.stg_airlines
-###############################################
+--###############################################
+--# raw.airlabs_airlines -> silver.stg_airlines
+--###############################################
 
-{{ config(schema='silver',materialized='incremental',
-        unique_key='airline_id',) }}
+{{ config(materialized='incremental',
+        unique_key='airline_id',post_hook=[
+      "CREATE INDEX IF NOT EXISTS idx_stg_airlines_icao ON {{ this }} (icao_code)"
+    ]) }}
 
 with Airlines as (
     select *
@@ -16,8 +18,8 @@ final as (
         ]) }} AS airline_id,
 		name as airline_name,
 	    iata_code,
-	    icao_code,
-    FROM Airports  
+	    icao_code
+    FROM Airlines  
     WHERE icao_code IS NOT NULL
 )
 select * from final

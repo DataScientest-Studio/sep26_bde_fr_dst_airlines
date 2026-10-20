@@ -32,6 +32,24 @@ sources:
             description: "Longitude of Airport"
             tests:
               - not_null
+      - name: airlabs_airlines
+        description: "List of Airlines from Airlabs API"
+        columns:
+          - name: iata_code
+            description: "IATA Code of Airport"
+            tests:
+              - unique
+              - not_null
+          - name: icao_code
+            description: "ICAO Code of Airport"
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: "Name of Airport"
+            tests:
+              - unique
+              - not_null
       - name: airlabs_schedules
         description: "Schedules from Airlabs API"
         columns:
