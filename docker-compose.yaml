@@ -264,6 +264,12 @@ services:
 
     environment:
       PYTHONPATH: /app
+      PG_HOST: database
+      PG_PORT: 5432
+      PG_DATABASE: airline
+      PG_USER: batch
+      PG_PASSWORD: ${DBT_BATCH_PASSWORD}
+      API_KEY: ${FASTAPI_KEY}
 
     restart: unless-stopped
 

@@ -33,6 +33,7 @@ jobs:
           AIRFLOW_JWT_SECRET: ${{ secrets.AIRFLOW_JWT_SECRET }}
           DBT_BATCH_PASSWORD: ${{ secrets.DBT_BATCH_PASSWORD }}
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+          FASTAPI_KEY: ${{ secrets.FASTAPI_KEY }}
         run: |
           {
             printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
@@ -41,6 +42,7 @@ jobs:
             printf 'AIRFLOW_JWT_SECRET=%s\n' "$AIRFLOW_JWT_SECRET"
             printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
             printf 'PG_ADMIN_PASSWORD=%s\n' "$PG_ADMIN_PASSWORD"
+            printf 'FASTAPI_KEY=%s\n' "$FASTAPI_KEY"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 660 /home/airline/repos/.env'
       - name: Create Airflow passwords file
