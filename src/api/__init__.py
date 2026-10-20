@@ -1,1 +1,1 @@
-﻿"""Package API FastAPI pour DST Airlines."""
+"""Package API FastAPI pour DST Airlines."""

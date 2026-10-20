@@ -3,7 +3,7 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY ../../src/api/requirements.txt .
-
+RUN ls .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .

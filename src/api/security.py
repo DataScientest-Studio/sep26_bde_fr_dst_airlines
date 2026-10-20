@@ -1,4 +1,4 @@
-﻿import secrets
+import secrets
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from src.api.config import settings
