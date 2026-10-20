@@ -8,7 +8,7 @@ model-paths:
 - models
 
 models:
-  dataplatform:
+  airline_platform:
     +materialized: view
     raw:
       +schema: raw
