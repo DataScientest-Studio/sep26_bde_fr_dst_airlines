@@ -119,6 +119,9 @@ services:
       # Permet au conteneur Airflow d'accéder au démon Docker de l'hôte
       # Nécessaire pour exécuter des commandes docker exec, docker run, etc.
       - /var/run/docker.sock:/var/run/docker.sock 
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
     command: scheduler
 
 

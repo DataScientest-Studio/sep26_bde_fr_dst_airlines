@@ -63,7 +63,8 @@ def get_flights(
     airline_code: Optional[str] = Query(None),
     origin_airport: Optional[str] = Query(None),
     destination_airport: Optional[str] = Query(None),
-    flight_date: Optional[date] = Query(None),
+    start_hour: Optional[int] = Query(None),
+    end_hour: Optional[int] = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -72,20 +73,19 @@ def get_flights(
     query = """
         SELECT
             flight_id,
-            flight_date,
-            airline_code,
-            flight_number,
-            origin_airport,
-            destination_airport,
-            departure_delay,
-            arrival_delay,
-            cancelled
-        FROM silver.flights
-        WHERE (:airline_code IS NULL OR airline_code = :airline_code)
-          AND (:origin_airport IS NULL OR origin_airport = :origin_airport)
-          AND (:destination_airport IS NULL OR destination_airport = :destination_airport)
-          AND (:flight_date IS NULL OR flight_date = :flight_date)
-        ORDER BY flight_date DESC NULLS LAST
+            flight_icao, 
+            airline_icao, 
+            flight_number, 
+            dep_iata, 
+            arr_iata, 
+            arr_time, 
+            dep_time
+        FROM silver.stg_flights
+        WHERE (:airline_code IS NULL OR airline_icao = :airline_code)
+          AND (:origin_airport IS NULL OR dep_iata = :origin_airport)
+          AND (:destination_airport IS NULL OR arr_iata = :destination_airport)
+          AND ((:start_hour IS NULL OR dep_time >= :start_time) OR (:end_hour IS NULL OR arr_time <= :end_time))
+        ORDER BY dep_time DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """
     rows = db.execute(
@@ -94,7 +94,8 @@ def get_flights(
             "airline_code": airline_code,
             "origin_airport": origin_airport,
             "destination_airport": destination_airport,
-            "flight_date": flight_date,
+            "start_hour": start_hour,
+            "end_hour":end_hour,
             "limit": limit,
             "offset": offset,
         },

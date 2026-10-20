@@ -28,34 +28,39 @@ class BatchPredictionOutput(BaseModel):
 
 
 class Airport(BaseModel):
-    id:Optional[int]
-    iata_code:Optional[str]
-    icao_code: Optional[str]
-    airport_name: str
-    city: Optional[str] = None
-    country: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    """ Store Airport information """
+    id:Optional[int]=Field( default=None, description="Unique internal airport identifier"),
+    iata_code:Optional[str]=Field( default=None, description="Airpoert IATA Code"),
+    icao_code: Optional[str]=Field( default=None, description="Airport ICAO Code"),
+    airport_name: str=Field( default=None, description="Airport Name"),
+    city: Optional[str] = Field( default=None, description="City of Airport"),
+    country: Optional[str] = Field( default=None, description="Country ISO Code of Airport"),
+    latitude: Optional[float] =Field( default=None, description="Airport Latitude"),
+    longitude: Optional[float] =Field( default=None, description="Airport Longitude")
 
 
 class Airline(BaseModel):
-    iata_code: str
-    name: str
-    icao_code:str
+    """ Store Airline information """
+    iata_code: str =Field( default=None, description="Airline IATA Code"),
+    name: str=Field( default=None, description="Airline Name"),
+    icao_code:str=Field( default=None, description="ICAO Code")
 
 
 class Flight(BaseModel):
-    flight_id: Optional[int] = None
-    start_time: Optional[date] = None
-    end_time: Optional[date] = None
-    airline_icao: str
-    flight_number: Optional[str] = None
-    origin_airport: str
-    destination_airport: str
+    """ Store Flight response """
+    flight_id: Optional[int] =Field( default=None, description="Unique internal flight identifier")
+    flight_icao=Optional[str] =Field( default=None, description="Flight ICAO Code"), 
+    airline_icao=Optional[str] =Field( default=None, description="Airline ICAO Code"),
+    flight_number=Optional[str] =Field( default=None, description="Flight Number"), 
+    dep_iata=Optional[str] =Field( default=None, description="Departure Airport IATA Code"),
+    arr_iata=Optional[str] =Field( default=None, description="Arrival Airport IATA Code"),
+    arr_time=Optional[str] =Field( default=None, description="Arrival Time"), 
+    dep_time=Optional[str] =Field( default=None, description="Departure Time"),
     
 
 
 class StatsOut(BaseModel):
+    """ Store Statistics """
     total_flights: int
     avg_departure_delay: float
     avg_arrival_delay: float
