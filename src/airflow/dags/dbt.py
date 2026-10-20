@@ -20,7 +20,7 @@ with DAG(
         task_id="dbt_run",
         bash_command="""
         docker compose \
-        -f /home/airline/repos/docker-compose.yml \
+        -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
         run --rm dbt dbt run
         """,
@@ -34,7 +34,7 @@ with DAG(
         task_id="dbt_test",
         bash_command="""
         docker compose \
-        -f /home/airline/repos/docker-compose.yml \
+        -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
         run --rm dbt dbt test
         """,
@@ -47,7 +47,7 @@ with DAG(
         task_id="dbt_docs",
         bash_command="""
         docker compose \
-        -f /home/airline/repos/docker-compose.yml \
+        -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
         run --rm dbt dbt docs generate
         """,
