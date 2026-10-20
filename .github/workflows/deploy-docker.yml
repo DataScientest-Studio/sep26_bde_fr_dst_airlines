@@ -8,6 +8,7 @@ on:
       - "docker-compose.yaml"
       - "docker/**"
       - ".github/workflows/deploy-docker.yml"
+      - "src/api/requirements.txt"
 
   workflow_dispatch:
 
