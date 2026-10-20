@@ -122,6 +122,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
+      - /home/airline/repos:/home/airline/repos    # Donne acces au docker compose sur la VM pour utiliser docker compose pour DBT
     command: scheduler
 
 
@@ -147,12 +148,16 @@ services:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - ./docker/airflow/passwords.json:/opt/airflow/passwords.json
+      - /home/airline/repos:/home/airline/repos    # Donne acces au docker compose sur la VM pour utiliser docker compose pour DBT
 
     command: api-server
 
     ports:
       - "8080:8080"
 
+  # ============================================================
+  # Airflow DAG Processor : To load DAG Files
+  # ============================================================
   airflow-dag-processor:
     image: apache/airflow:3.3.2
     container_name: airflow_dag_processor
@@ -173,6 +178,7 @@ services:
       - ./src/airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - ./docker/airflow/passwords.json:/opt/airflow/passwords.json
+      - /home/airline/repos:/home/airline/repos    # Donne acces au docker compose sur la VM pour utiliser docker compose pour DBT
 
     command: dag-processor
 
