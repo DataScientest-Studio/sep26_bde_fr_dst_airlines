@@ -247,6 +247,29 @@ services:
   #     - mlflow_artifacts:/mlflow/artifacts
 
 
+  # ============================================================
+  # Fast API
+  # ============================================================
+  api:
+    build: 
+      context: .
+      dockerfile: docker/fastapi/Dockerfile
+    container_name: airline_api
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - .env
+
+    environment:
+      PYTHONPATH: /app
+
+    restart: unless-stopped
+
+    volumes:
+      - ./src/api:/app/src/api
+
 volumes:
   postgres_data:
   airflow_logs:
