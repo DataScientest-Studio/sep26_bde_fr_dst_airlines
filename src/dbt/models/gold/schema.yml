@@ -1,0 +1,28 @@
+
+version: 2
+
+models:
+  - name: dim_flights
+    description: "Dim List of Flights from Airlabs Schedules"
+    columns:
+      - name: flight_id
+        description: "ID of Flight (for one hour when recycled)"
+        tests:
+          - unique
+          - not_null
+  - name: dim_airports
+    description: "List of Airports from Airlabs Schedules"
+    columns:
+      - name: airport_id
+        description: "Internal ID of Airport"
+        tests:
+          - unique
+          - not_null
+  - name: dim_airlines
+    description: "List of Airlines"
+    columns:
+      - name: airline_id
+        description: "Internal ID of airline"
+        tests:
+          - unique
+          - not_null

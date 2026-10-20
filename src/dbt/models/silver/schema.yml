@@ -10,3 +10,19 @@ models:
         tests:
           - unique
           - not_null
+  - name: stg_airports
+    description: "List of Airports from Airlabs Schedules"
+    columns:
+      - name: airport_id
+        description: "Internal ID of Airport"
+        tests:
+          - unique
+          - not_null
+  - name: stg_airlines
+    description: "List of Airlines"
+    columns:
+      - name: airline_id
+        description: "Internal ID of airline"
+        tests:
+          - unique
+          - not_null
