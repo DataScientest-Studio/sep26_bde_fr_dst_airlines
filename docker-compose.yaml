@@ -222,6 +222,8 @@ services:
       - ./src/dbt:/usr/app
       # Profil DBT
       - ./docker/dbt/profiles.yml:/root/.dbt/profiles.yml:ro
+      # Pour persister les dependance
+      - dbt_packages:/usr/app/dbt_packages
 
     working_dir: /usr/app
 
@@ -290,5 +292,5 @@ volumes:
   airflow_logs:
   portainer_data:
   mlflow_artifacts:
-
+  dbt_packages:
 
