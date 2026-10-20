@@ -22,7 +22,8 @@ with DAG(
         docker compose \
         -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
-        run --rm dbt dbt run
+        run --rm dbt \
+        bash -c "dbt deps && dbt run"
         """,
     )
     
@@ -36,7 +37,8 @@ with DAG(
         docker compose \
         -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
-        run --rm dbt dbt test
+        run --rm dbt \
+                bash -c "dbt deps && dbt test"
         """,
     )
 
