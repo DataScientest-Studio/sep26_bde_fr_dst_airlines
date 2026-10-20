@@ -6,3 +6,11 @@ pydantic==2.14.1
 pydantic_settings==2.16.1
 SQLAlchemy==2.0.36
 uvicorn[standard]
+psycopg2-binary
+google-cloud-storage
+google-auth
+fastapi[standard]
+python-multipart
+httpx
+scikit-learn
+google-cloud-secret-manager
