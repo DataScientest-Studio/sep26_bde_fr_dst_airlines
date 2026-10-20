@@ -18,8 +18,8 @@ final as (
     SELECT DISTINCT 
         {{ dbt_utils.generate_surrogate_key([
             'flight_icao',
-            'da.airport_id',
-            'aa.airport_id',
+            's.dep_iata',
+            's.arr_iata',
             'dep_hour',
             'arr_hour',
             'al.airline_id'
@@ -28,12 +28,14 @@ final as (
         al.airline_id as airline_id,
         s.flight_number,
         da.airport_id as dep_airport_id,
+        s.dep_iata,
         aa.airport_id as arr_airport_id,
+        s.arr_iata,
         s.dep_hour AS dep_time,
         s.arr_hour AS arr_time
 FROM Schedules s 
 LEFT JOIN Airports da ON s.dep_iata=da.iata_code
-LEFT JOIN Airports aa ON s.arr_iata=da.iata_code
+LEFT JOIN Airports aa ON s.arr_iata=aa.iata_code
 LEFT JOIN Airlines al ON s.airline_icao= al.icao_code
 WHERE s.status = 'landed'
 GROUP BY flight_icao,
@@ -42,7 +44,9 @@ GROUP BY flight_icao,
         aa.airport_id ,
         dep_hour,
         arr_hour,
-        al.airline_id
+        al.airline_id,
+        s.dep_iata,
+        s.arr_iata
 )
 
 select * from final
