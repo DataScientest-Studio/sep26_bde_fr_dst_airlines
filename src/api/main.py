@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date
 from typing import List, Optional
-
+from fastapi import HTTPException
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -70,37 +70,47 @@ def get_flights(
     db: Session = Depends(get_db),
 ):
     """Récupère la liste des vols depuis PostgreSQL avec filtres optionnels."""
-    query = """
-        SELECT
-            flight_id,
-            flight_icao, 
-            airline_icao, 
-            flight_number, 
-            dep_iata, 
-            arr_iata, 
-            arr_time, 
-            dep_time
-        FROM silver.stg_flights
-        WHERE (:airline_code IS NULL OR airline_icao = :airline_code)
-          AND (:origin_airport IS NULL OR dep_iata = :origin_airport)
-          AND (:destination_airport IS NULL OR arr_iata = :destination_airport)
-          AND ((:start_hour IS NULL OR dep_time >= :start_time) OR (:end_hour IS NULL OR arr_time <= :end_time))
-        ORDER BY dep_time DESC NULLS LAST
-        LIMIT :limit OFFSET :offset
-    """
-    rows = db.execute(
-        text(query),
-        {
-            "airline_code": airline_code,
-            "origin_airport": origin_airport,
-            "destination_airport": destination_airport,
-            "start_hour": start_hour,
-            "end_hour":end_hour,
-            "limit": limit,
-            "offset": offset,
-        },
-    ).mappings().all()
-    return [Flight(**row) for row in rows]
+    try:
+        query = """
+            SELECT
+                flight_id,
+                flight_icao, 
+                al.icao_code as airport_icao, 
+                al.airline_name,
+                flight_number, 
+                da.icao_code as dep_icao, 
+                aa.icao_code as arr_icao, 
+                arr_time, 
+                dep_time
+            FROM gold.dim_flights f
+            INNER JOIN gold.dim_airlines al ON f.airline_id=al.airline_id
+            INNER JOIN gold.dim_airports da ON f.dep_airport_id=da.airport_id
+            INNER JOIN gold.dim_airports aa ON f.arr_airport_id=aa.airport_id
+            WHERE (:airline_code IS NULL OR al.icao_code = :airline_code OR al.airline_name ILIKE :airline_name)
+            AND (:origin_airport IS NULL OR da.icao_code = :origin_airport)
+            AND (:destination_airport IS NULL OR aa.icao_code  = :destination_airport)
+            AND ((:start_hour IS NULL OR dep_time >= :start_hour) OR (:end_hour IS NULL OR arr_time <= :end_hour))
+            ORDER BY dep_time DESC NULLS LAST
+            LIMIT :limit OFFSET :offset
+        """
+        rows = db.execute(
+            text(query),
+            {
+                "airline_code": airline_code,
+                "airline_name": f"'%{airline_code}%'" if airline_code else "",
+                "origin_airport": origin_airport,
+                "destination_airport": destination_airport,
+                "start_hour": start_hour,
+                "end_hour":end_hour,
+                "limit": limit,
+                "offset": offset,
+            },
+        ).mappings().all()
+        data=[Flight(**row) for row in rows]
+        return data
+    except Exception as e:
+        print(e.message)
+        raise HTTPException(f"Error getting Flights : {e}")
 
 
 @app.get("/airports", response_model=List[Airport], tags=["Reference Data"])
@@ -110,29 +120,38 @@ def get_airports(
     db: Session = Depends(get_db),
 ):
     """Récupère les aéroports depuis PostgreSQL."""
-    query = """
-        SELECT 0 as id, iata_code,icao_code, name as airport_name,'' as city, country_code as country,lat as latitude,lng as longitude
-        FROM raw.airlabs_airports
-        WHERE (:search IS NULL
-               OR iata_code ILIKE :pattern
-               OR name ILIKE :pattern
-               )
-               AND (:country IS NULL OR country_code = :country)
-               AND iata_code IS NOT NULL AND icao_code IS NOT NULL
-        ORDER BY iata_code
-    """
-    pattern = f"%{search}%" if search else None
-    rows = db.execute(text(query), {"search": search, "pattern": pattern, "country":country}).mappings().all()
-    return [Airport(**row) for row in rows]
+    try:
+        query = """
+            SELECT 0 as id, iata_code,icao_code, airport_name,'' as city, country_code as country,lat as latitude,lng as longitude
+            FROM gold.dim_airports
+            WHERE (:search IS NULL
+                OR iata_code ILIKE :pattern
+                OR airport_name ILIKE :pattern
+                )
+                AND (:country IS NULL OR country_code = :country)
+                AND iata_code IS NOT NULL AND icao_code IS NOT NULL
+            ORDER BY iata_code
+        """
+        pattern = f"%{search}%" if search else None
+        rows = db.execute(text(query), {"search": search, "pattern": pattern, "country":country}).mappings().all()
+        return [Airport(**row) for row in rows]
+    except Exception as e:
+        raise HTTPException(f"Error getting Airports : {e}")
 
 
 @app.get("/airlines", response_model=List[Airline], tags=["Reference Data"])
 def get_airlines(search: Optional[str] = Query(None),db: Session = Depends(get_db)):
     """Récupère la liste des compagnies aériennes depuis PostgreSQL."""
-    pattern = f"%{search}%" if search else None
-    query = "SELECT iata_code, name, icao_code FROM raw.airlabs_airlines WHERE iata_code is not null and icao_code is not null AND (:search IS NULL OR name ILIKE :pattern) ORDER BY name"
-    rows = db.execute(text(query),{"search": search, "pattern": pattern}).mappings().all()
-    return [Airline(**row) for row in rows]
+    try:
+        pattern = f"%{search}%" if search else None
+        query = """SELECT iata_code, airline_name, icao_code 
+                    FROM gold.dim_airlines 
+                    WHERE iata_code is not null and icao_code is not null 
+                    AND (:search IS NULL OR airline_name ILIKE :pattern) ORDER BY airline_name"""
+        rows = db.execute(text(query),{"search": search, "pattern": pattern}).mappings().all()
+        return [Airline(**row) for row in rows]
+    except Exception as e:
+        raise HTTPException(f"Error getting Airlines : {e}")
 
 
 @app.get("/stats", response_model=StatsOut, tags=["Analytics"])

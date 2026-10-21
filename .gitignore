@@ -92,3 +92,6 @@ logs
 .mypy_cache/
 src/data/data/raw/
 src/dbt/dbt_packages/
+
+# Streamlit
+secrets.toml

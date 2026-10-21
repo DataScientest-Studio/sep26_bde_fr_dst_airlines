@@ -4,12 +4,13 @@
       "CREATE INDEX IF NOT EXISTS idx_stg_flight_arr_airport ON {{ this }} (arr_airport_id)",
       "CREATE INDEX IF NOT EXISTS idx_stg_flight_airline ON {{ this }} (airline_id)",
       "CREATE INDEX IF NOT EXISTS idx_stg_flight_num ON {{ this }} (flight_number)",
+      "GRANT SELECT ON ALL TABLES IN SCHEMA silver TO airline_rw"
     ]) }}
 
 with schedules as (
     select a.*,    
-        EXTRACT(HOUR FROM a.dep_time) AS dep_hour,
-        EXTRACT(HOUR FROM a.arr_time) AS arr_hour 
+        TO_CHAR(dep_time, 'HH24:MI')  AS dep_hour,
+        TO_CHAR(arr_time, 'HH24:MI')  AS arr_hour 
         from {{ source('raw', 'airlabs_schedules') }} a
 ),
 airports as (SELECT * FROM {{ref('stg_airports')}}),

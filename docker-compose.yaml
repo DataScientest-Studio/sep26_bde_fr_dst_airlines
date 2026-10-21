@@ -286,6 +286,31 @@ services:
     volumes:
       - ./src/api:/app/src/api
 
+  # ============================================================
+  # Frontend Streamlit
+  # ============================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+
+    ports:
+      - "8501:8501"
+
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+
+    volumes:
+      # Code source en développement
+      - ./src/frontend:/app
+
+      # Secrets montés en lecture seule
+      - ./src/frontend/.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
+
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   airflow_logs:

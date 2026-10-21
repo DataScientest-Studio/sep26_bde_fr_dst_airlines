@@ -42,20 +42,21 @@ class Airport(BaseModel):
 class Airline(BaseModel):
     """ Store Airline information """
     iata_code: str =Field( default=None, description="Airline IATA Code"),
-    name: str=Field( default=None, description="Airline Name"),
+    airline_name: str=Field( default=None, description="Airline Name"),
     icao_code:str=Field( default=None, description="ICAO Code")
 
 
 class Flight(BaseModel):
     """ Store Flight response """
-    flight_id: Optional[int] =Field( default=None, description="Unique internal flight identifier")
-    flight_icao=Optional[str] =Field( default=None, description="Flight ICAO Code"), 
-    airline_icao=Optional[str] =Field( default=None, description="Airline ICAO Code"),
-    flight_number=Optional[str] =Field( default=None, description="Flight Number"), 
-    dep_iata=Optional[str] =Field( default=None, description="Departure Airport IATA Code"),
-    arr_iata=Optional[str] =Field( default=None, description="Arrival Airport IATA Code"),
-    arr_time=Optional[str] =Field( default=None, description="Arrival Time"), 
-    dep_time=Optional[str] =Field( default=None, description="Departure Time"),
+    flight_id: Optional[str] =Field( default=None, description="Unique internal flight identifier")
+    flight_icao:Optional[str] =Field( default=None, description="Flight ICAO Code") 
+    airline_icao:Optional[str] =Field( default=None, description="Airline ICAO Code")
+    airline_name:Optional[str] =Field( default=None, description="Airline Name")
+    flight_number:Optional[str] =Field( default=None, description="Flight Number"), 
+    dep_icao:Optional[str] =Field( default=None, description="Departure Airport IATA Code")
+    arr_icao:Optional[str] =Field( default=None, description="Arrival Airport IATA Code")
+    arr_time:Optional[str] =Field( default=None, description="Arrival Time")
+    dep_time:Optional[str] =Field( default=None, description="Departure Time")
     
 
 

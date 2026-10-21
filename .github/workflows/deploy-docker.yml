@@ -62,6 +62,20 @@ jobs:
 
             ls -l /home/airline/repos/docker/airflow/passwords.json
           '
+      - name: Create Streamlit secrets
+        run: |
+          mkdir -p .streamlit
+
+          cat > .streamlit/secrets.toml << EOF
+          [auth]
+          redirect_uri = "http://localhost:8501/oauth2callback"
+          cookie_secret = "${{ secrets.COOKIE_SECRET }}"
+
+          [auth.google]
+          client_id = "${{ secrets.GOOGLE_CLIENT_ID }}"
+          client_secret = "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+          EOF
       - name: Deploy Docker Compose
         run: |
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" << 'EOF'
