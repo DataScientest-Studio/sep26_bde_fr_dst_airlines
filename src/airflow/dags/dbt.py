@@ -51,7 +51,8 @@ with DAG(
         docker compose \
         -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
-        run --rm dbt dbt docs generate
+        run --rm dbt \
+        bash -c "dbt deps && dbt docs"
         """,
         trigger_rule="all_done",
     )
