@@ -14,7 +14,21 @@ with DAG(
 
 
     # ==========================================================
-    # Silver : dbt run
+    # Silver/Gold : dbt seed
+    # ==========================================================
+    dbt_seed = BashOperator(
+        task_id="dbt_seed",
+        bash_command="""
+        docker compose \
+        -f /home/airline/repos/docker-compose.yaml \
+        --profile tools \
+        run --rm dbt \
+        bash -c "dbt deps && dbt seed"
+        """,
+    )
+
+    # ==========================================================
+    # Silver/Gold : dbt run
     # ==========================================================
     dbt_run = BashOperator(
         task_id="dbt_run",
@@ -52,9 +66,9 @@ with DAG(
         -f /home/airline/repos/docker-compose.yaml \
         --profile tools \
         run --rm dbt \
-        bash -c "dbt deps && dbt docs"
+        bash -c "dbt deps && dbt docs generate"
         """,
         trigger_rule="all_done",
     )
 
-    dbt_run >> dbt_test >> dbt_docs
+    dbt_seed >> dbt_run >> dbt_test >> dbt_docs
