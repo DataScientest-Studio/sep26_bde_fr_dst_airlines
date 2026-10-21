@@ -30,11 +30,6 @@ select
     date_trunc('hour', first_seen) as dep_hour,
     date_trunc('hour', last_seen) as arr_hour,
     extract(epoch from last_seen - first_seen) / 60 as duration_min,
-    select
-    *,
-    date_trunc('hour', first_seen) as dep_hour,
-    date_trunc('hour', last_seen) as arr_hour,
-    extract(epoch from last_seen - first_seen) / 60 as duration_min,
     {{ dbt_utils.generate_surrogate_key(['adep']) }} as dep_airport_id,
     {{ dbt_utils.generate_surrogate_key(['ades']) }} as arr_airport_id,
     {{ dbt_utils.generate_surrogate_key(['company']) }} as airline_id
