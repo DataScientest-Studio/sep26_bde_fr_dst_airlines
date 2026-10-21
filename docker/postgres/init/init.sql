@@ -50,3 +50,4 @@ GRANT airline_rw TO airflow;
 GRANT airline_rw TO fastapi;
 GRANT airline_rw TO herve;
 GRANT airline_rw TO pascal;
+GRANT airline_rw TO batch;

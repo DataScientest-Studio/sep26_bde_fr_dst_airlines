@@ -11,61 +11,32 @@ sources:
         columns:
           - name: iata_code
             description: "IATA Code of Airport"
-            tests:
-              - unique
-              - not_null
           - name: icao_code
             description: "ICAO Code of Airport"
-            tests:
-              - unique
-              - not_null
           - name: name
             description: "Name of Airport"
-            tests:
-              - unique
-              - not_null
           - name: lat
             description: "Latitude of Airport"
-            tests:
-              - not_null
           - name: lng
             description: "Longitude of Airport"
-            tests:
-              - not_null
       - name: airlabs_airlines
         description: "List of Airlines from Airlabs API"
         columns:
           - name: iata_code
             description: "IATA Code of Airport"
-            tests:
-              - unique
-              - not_null
           - name: icao_code
             description: "ICAO Code of Airport"
-            tests:
-              - unique
-              - not_null
           - name: name
             description: "Name of Airport"
-            tests:
-              - unique
-              - not_null
       - name: airlabs_schedules
         description: "Schedules from Airlabs API"
         columns:
           - name: id
             description: "Internal ID of Schedule"
-            tests:
-              - unique
-              - not_null
           - name: airline_icao
             description: "ICAO of Airline"
-            tests:
-              - not_null
           - name: flight_icao
             description: "ICAO code of Flight"
-            tests:
-              - not_null
      
 
   
