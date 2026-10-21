@@ -2,7 +2,7 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-
+from airflow.utils.trigger_rule import TriggerRule
 
 with DAG(
     dag_id="airline_pipeline",
@@ -39,6 +39,7 @@ with DAG(
         run --rm dbt \
         bash -c "dbt deps && dbt run"
         """,
+        trigger_rule=TriggerRule.ALL_DONE
     )
     
 
@@ -54,6 +55,7 @@ with DAG(
         run --rm dbt \
                 bash -c "dbt deps && dbt test"
         """,
+        trigger_rule=TriggerRule.ALL_DONE
     )
 
     # ==========================================================
