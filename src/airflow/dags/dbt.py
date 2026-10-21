@@ -7,7 +7,7 @@ from airflow.operators.bash import BashOperator
 with DAG(
     dag_id="airline_pipeline",
     start_date=datetime(2026, 1, 1),
-    schedule="@daily",
+    schedule="30 8,14 * * *",
     catchup=False,
     tags=["airline", "spark", "dbt"],
 ) as dag:
