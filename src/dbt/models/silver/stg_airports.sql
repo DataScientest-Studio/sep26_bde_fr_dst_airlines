@@ -2,15 +2,26 @@
 --# raw.airlabs_airports -> silver.stg_airports
 --###############################################
 
-{{ config(materialized='incremental',
+{{ config(materialized='table',schema='silver',
         unique_key='airport_id',
         post_hook=[
       "CREATE INDEX IF NOT EXISTS idx_stg_airports_icao ON {{ this }} (icao_code)"
     ]) }}
 
-with Airports as (
+with airports as (
     select *
         from {{ source('raw', 'airlabs_airports') }} a
+),
+dedup as (
+
+    select *,
+           row_number() over (
+               partition by icao_code
+               order by icao_code
+           ) as rn
+    from airports
+    where icao_code is not null
+
 ),
 final as (
     SELECT DISTINCT 
@@ -24,7 +35,7 @@ final as (
 	    lng,
 	    country_code,
 	    '' as city
-    FROM Airports  
-    WHERE icao_code IS NOT NULL
+    FROM dedup  
+    WHERE rn=1
 )
 select * from final

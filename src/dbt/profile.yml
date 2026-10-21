@@ -8,5 +8,5 @@ airline:
       password: "{{ env_var('DBT_PASSWORD') }}"
       port: 5432
       dbname: airline
-      schema: silver
+      schema: public
       threads: 1
