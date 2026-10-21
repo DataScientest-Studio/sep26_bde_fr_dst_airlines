@@ -66,6 +66,23 @@ sources:
             description: "ICAO code of Flight"
             tests:
               - not_null
+      - name: opdi_flights
+        description: "OPDI flights to/from Paris airports (Eurocontrol)"
+        columns:
+          - name: id
+            description: "OPDI flight ID"
+            tests:
+              - unique
+              - not_null
+      - name: meteo_hourly
+        description: "Hourly weather from Open-Meteo archive"
+        columns:
+          - name: icao
+            tests:
+              - not_null
+          - name: time
+            tests:
+              - not_null    
      
 
   

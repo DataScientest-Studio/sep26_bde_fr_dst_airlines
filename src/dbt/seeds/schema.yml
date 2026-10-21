@@ -1,0 +1,11 @@
+version: 2
+
+seeds:
+  - name: icao_corrections
+    description: "Old and new icao code"
+    columns:
+      - name: old_icao
+        description: "Deprecated icao code"
+        tests:
+          - unique
+          - not_null
