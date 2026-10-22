@@ -22,10 +22,12 @@ def get_api_key(api_keys_file)->tuple:
     """ Read Key files and select first which is not expired 
         @param api_keys_file : Path to json file with list of available keys
     """
-    with open(api_keys_file, 'r') as fd:
-        api_keys = json.load(fd)
-        
-
+    if os.path.isfile(api_keys_file):
+        with open(api_keys_file, 'r') as fd:
+            api_keys = json.load(fd)
+    else:
+        api_keys = json.loads(api_keys_file)    
+    print(f"{len(api_keys)} Clés d'API disponible")
     for item in api_keys:
         name = item["name"]
         key=item["key"]
@@ -35,6 +37,9 @@ def get_api_key(api_keys_file)->tuple:
             if "request" in content:
                 restant = content["request"]["key"]["limits_total"]
                 return name,key, restant
+            else:
+                print(f"{name} : {r.text}")
+    print(f"Aucune clé diponible")
     return None
 
 def read_airports(api_key:str, airport_file)->list:
@@ -65,8 +70,10 @@ def uploader_gcs(local_path, bucket_name, blob_name, key_file):
         @param blob_name : Name and path of file
         @param key_file : File with Google Credentials
     """
-    #client = storage.Client()
-    client = storage.Client.from_service_account_json(key_file)
+    if key_file:
+        client = storage.Client.from_service_account_json(key_file)
+    else:
+        client = storage.Client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
@@ -207,28 +214,18 @@ def save_csv(rows, filename, local_folder):
     print(f"{len(rows)} row added in {path}")
     return path, istemp
 
-def main():
-    date = datetime.now().strftime("%Y-%m-%d")
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", required=False, help="Répertoire de sortie - empty if not write in local")
-    parser.add_argument("--api-keys-file", dest="api_keys", required=True,  help="Fichier contannt les clés API AirLabs (json)")
-    parser.add_argument("--google-credentials",dest="google_cred",  required=False,  help="Chemin vers le fichier JSON Google Cloud")
-    parser.add_argument("--airports", required=True, help="List of Airport")
-    parser.add_argument("--bucket-path",dest="bucket_path", required=False,  help="bucket/path for Google Cloud Storage")
-    args = parser.parse_args()
-
+def run(api_keys,airports,bucket_path=None, local_dir=None, google_cred=None):
     # Get Active Key
-    key_to_use = get_api_key(args.api_keys)
+    key_to_use = get_api_key(api_keys)
     
     if key_to_use is None:
         print("All Keys expired or reach limit")
     else:
         print(f"Use Key {key_to_use[0]} : {key_to_use[2]} restant")
 
-    airports = read_airports(key_to_use[1], args.airports)
-    if args.bucket_path:
-        m= re.match(r"(?P<bucket>[\.\w\-_]+)\/(?P<path>.*)", args.bucket_path)
+    airports = read_airports(key_to_use[1], airports)
+    if bucket_path:
+        m= re.match(r"(?P<bucket>[\.\w\-_]+)\/(?P<path>.*)", bucket_path)
         if not m:
             raise Exception(f"Bad Bucket path format")
         bucket = m.group("bucket")
@@ -246,10 +243,10 @@ def main():
             filename = airport.pattern.replace("{TIMESTAMPH}",datetime.now().strftime("%Y%m%d%H") ).replace("{TIMESTAMP}",datetime.now().strftime("%Y%m%d") )
             data = collect_data(airport)
             # Write local/temp file
-            local_path, istemp = save_csv(data, filename, args.dir)
+            local_path, istemp = save_csv(data, filename, local_dir)
             # Upload to Bucket if bucket path defined
             if local_path and bucket:   
-                uploader_gcs(local_path,bucket, f"{path}/{filename}", args.google_cred )
+                uploader_gcs(local_path,bucket, f"{path}/{filename}", google_cred )
 
         except Exception as exc:
             print(f"Error {airport.desc}: {exc}")
@@ -257,6 +254,19 @@ def main():
             # Remove Temp file if temp...
             if istemp and os.path.isfile(local_path): os.remove(local_path)
 
+
+def main():
+    date = datetime.now().strftime("%Y-%m-%d")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dir", required=False, help="Répertoire de sortie - empty if not write in local")
+    parser.add_argument("--api-keys-file", dest="api_keys", required=True,  help="Fichier contannt les clés API AirLabs (json)")
+    parser.add_argument("--google-credentials",dest="google_cred",  required=False,  help="Chemin vers le fichier JSON Google Cloud")
+    parser.add_argument("--airports", required=True, help="List of Airport")
+    parser.add_argument("--bucket-path",dest="bucket_path", required=False,  help="bucket/path for Google Cloud Storage")
+    args = parser.parse_args()
+
+    run(args.api_keys, args.airports, args.bucket_path, args.dir, args.google_creds)
 
 if __name__ == "__main__":
     main()
