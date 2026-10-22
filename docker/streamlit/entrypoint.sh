@@ -12,6 +12,6 @@ client_secret = "${GOOGLE_CLIENT_SECRET}"
 server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
 EOF
 
-exec python -m streamlit run app.py \
+exec python -m streamlit run src/frontend/app.py \
     --server.address=0.0.0.0 \
     --server.port=8501
