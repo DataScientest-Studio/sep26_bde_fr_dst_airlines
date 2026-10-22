@@ -34,6 +34,9 @@ jobs:
           DBT_BATCH_PASSWORD: ${{ secrets.DBT_BATCH_PASSWORD }}
           PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
           FASTAPI_KEY: ${{ secrets.FASTAPI_KEY }}
+          GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
+          GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
+          COOKIE_SECRET: ${{secrets.COOKIE_SECRET}}
         run: |
           {
             printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
@@ -43,6 +46,9 @@ jobs:
             printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
             printf 'PG_ADMIN_PASSWORD=%s\n' "$PG_ADMIN_PASSWORD"
             printf 'FASTAPI_KEY=%s\n' "$FASTAPI_KEY"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'COOKIE_SECRET=%s\n' "$COOKIE_SECRET"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 666 /home/airline/repos/.env'
       - name: Create Airflow passwords file
