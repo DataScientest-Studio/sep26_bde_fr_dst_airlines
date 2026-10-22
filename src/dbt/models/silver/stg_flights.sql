@@ -10,7 +10,8 @@
 with schedules as (
     select a.*,    
         TO_CHAR(dep_time, 'HH24:MI')  AS dep_hour,
-        TO_CHAR(arr_time, 'HH24:MI')  AS arr_hour 
+        TO_CHAR(arr_time, 'HH24:MI')  AS arr_hour,
+        EXTRACT(DOW FROM dep_time) AS dow
         from {{ source('raw', 'airlabs_schedules') }} a
 ),
 airports as (SELECT * FROM {{ref('stg_airports')}}),
@@ -23,7 +24,8 @@ final as (
             'aa.airport_id',
             'dep_hour',
             'arr_hour',
-            'al.airline_id'
+            'al.airline_id',
+            'dow'
         ]) }} AS flight_id,
 		s.flight_icao,
         al.airline_id as airline_id,
@@ -33,8 +35,10 @@ final as (
         aa.airport_id as arr_airport_id,
         s.arr_iata,
         s.dep_hour AS dep_time,
-        s.arr_hour AS arr_time
-FROM Schedules s 
+        s.arr_hour AS arr_time,
+        s.dow AS days_of_week,
+        count(*) AS occurences
+FROM schedules s 
 LEFT JOIN airports da ON s.dep_iata=da.iata_code
 LEFT JOIN airports aa ON s.arr_iata=aa.iata_code
 LEFT JOIN airlines al ON s.airline_icao= al.icao_code
@@ -47,7 +51,8 @@ GROUP BY flight_icao,
         arr_hour,
         al.airline_id,
         s.dep_iata,
-        s.arr_iata
+        s.arr_iata,
+        s.dow
 )
 
 select * from final

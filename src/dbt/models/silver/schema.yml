@@ -2,6 +2,14 @@
 version: 2
 
 models:
+  - name: stg_schedules
+    description: "List of Flights from Airlabs Schedules"
+    columns:
+      - name: id
+        description: "ID of Flight (for one hour when recycled)"
+        tests:
+          - unique
+          - not_null
   - name: stg_flights
     description: "List of Flights from Airlabs Schedules"
     columns:
