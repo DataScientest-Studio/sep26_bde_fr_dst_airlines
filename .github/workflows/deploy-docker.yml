@@ -66,7 +66,7 @@ jobs:
         run: |
           mkdir -p .streamlit
 
-          cat > /home/airline/repos/docker/streamlit/.streamlit/secrets.toml << EOF
+          cat > /home/airline/repos/docker/streamlit/secrets.toml << EOF
           [auth]
           redirect_uri = "http://localhost:8501/oauth2callback"
           cookie_secret = "${{ secrets.COOKIE_SECRET }}"

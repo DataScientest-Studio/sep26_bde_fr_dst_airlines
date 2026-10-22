@@ -307,7 +307,7 @@ services:
       - ./src/frontend:/app
 
       # Secrets montés en lecture seule
-      - ./docker/streamlit/.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
+      - ./docker/streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
 
       # Model IA monté
       - ./models:/app/models
