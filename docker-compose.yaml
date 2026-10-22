@@ -301,6 +301,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       COOKIE_SECRET: ${COOKIE_SECRET}
+      API_URL: "http://api:8000"
+      API_KEY: ${FASTAPI_KEY}
 
     volumes:
       # Code source en développement
