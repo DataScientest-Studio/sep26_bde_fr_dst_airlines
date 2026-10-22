@@ -58,7 +58,16 @@ class Flight(BaseModel):
     arr_time:Optional[str] =Field( default=None, description="Arrival Time")
     dep_time:Optional[str] =Field( default=None, description="Departure Time")
     
-
+class FlightSearch(BaseModel):
+    airline_name: str | None = None
+    airline_codes: List | None = None
+    origin_airport: str | None = None
+    destination_airport: str | None = None
+    start_hour: int | None = None
+    end_hour: int | None = None
+    flight_date: str | None = None,
+    limit:int = 100,
+    offset:int=0
 
 class StatsOut(BaseModel):
     """ Store Statistics """

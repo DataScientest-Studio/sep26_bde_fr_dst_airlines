@@ -39,29 +39,36 @@ class APIClient:
 
     def get_flights(
         self,
-        airline_code: Optional[str] = None,
+        airline_codes: Optional[List] = None,
+        airline_name: Optional[str] = None,
         origin_airport: Optional[str] = None,
         destination_airport: Optional[str] = None,
         flight_date: Optional[str] = None,
+        start_hour: Optional[int]= None,
+        end_hour: Optional[int]= None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
-        return self._get(
-            "/flight",
-            params={
-                "airline_code": airline_code,
-                "origin_airport": origin_airport,
-                "destination_airport": destination_airport,
-                "flight_date": flight_date,
-                "limit": limit,
-                "offset": offset,
-            },
-        )
+        payload={
+            "airline_codes": airline_codes,
+            "airline_name": airline_name,
+            "origin_airport": origin_airport,
+            "destination_airport": destination_airport,
+            "flight_date":flight_date, 
+            "start_hour":start_hour,
+            "end_hour":end_hour,
+            "offset":0,
+            "limit":100
+        }
+        return self._post( "/flights", payload )
+
 
     def get_airports(self, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        """ Get List of Airports """
         return self._get("/airports", params={"search": search})
 
     def get_airlines(self) -> List[Dict[str, Any]]:
+        """ Get list of Airlines """
         return self._get("/airlines")
 
     def get_stats(

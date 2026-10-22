@@ -36,7 +36,7 @@ final as (
         s.arr_iata,
         s.dep_hour AS dep_time,
         s.arr_hour AS arr_time,
-        s.dow AS days_of_week,
+        s.dow AS dow,
         count(*) AS occurences
 FROM schedules s 
 LEFT JOIN airports da ON s.dep_iata=da.iata_code

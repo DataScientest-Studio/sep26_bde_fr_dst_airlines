@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date,datetime
 from typing import List, Optional
 from fastapi import HTTPException
 from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import text, bindparam
 from sqlalchemy.orm import Session
 
 from src.api.config import settings
@@ -19,6 +19,7 @@ from src.api.schemas import (
     FlightPredictionInput,
     PredictionOutput,
     StatsOut,
+    FlightSearch
 )
 from src.api.security import verify_api_key
 
@@ -58,20 +59,29 @@ def predict_batch_flights(payload: BatchPredictionInput):
     return BatchPredictionOutput(predictions=ml_manager.predict(payload.flights))
 
 
-@app.get("/flight", response_model=List[Flight], tags=["Flights Data"])
+@app.post("/flights", response_model=List[Flight], tags=["Flights Data"])
 def get_flights(
-    airline_code: Optional[str] = Query(None),
-    origin_airport: Optional[str] = Query(None),
-    destination_airport: Optional[str] = Query(None),
-    start_hour: Optional[int] = Query(None),
-    end_hour: Optional[int] = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    search:FlightSearch,
     db: Session = Depends(get_db),
 ):
+
+    """         "airline_code": airline_code,
+                "origin_airport": origin_airport,
+                "destination_airport": destination_airport,
+                "month": int(month),
+                "day_of_week": int(day_of_week),
+                "scheduled_departure_hour": int(scheduled_departure_hour)"""
     """Récupère la liste des vols depuis PostgreSQL avec filtres optionnels."""
     try:
-        query = """
+        if search.flight_date:
+            date_obj = datetime.strptime(search.flight_date,"%Y-%m-%d" ).date()
+
+            dow = (date_obj.weekday() + 1) % 8  # Start Sunday
+        if search.airline_codes is not None and len(search.airline_codes)>0:
+            code_cond = " AND (al.icao_code IN :airline_codes)"
+        else:
+            code_cond =''
+        query = f"""
             SELECT
                 flight_id,
                 flight_icao, 
@@ -80,31 +90,45 @@ def get_flights(
                 flight_number, 
                 da.icao_code as dep_icao, 
                 aa.icao_code as arr_icao, 
-                arr_time, 
-                dep_time
+                da.iata_code as dep_iata, 
+                aa.iata_code as arr_iata, 
+                dep_time,
+                arr_time 
             FROM gold.dim_flights f
             INNER JOIN gold.dim_airlines al ON f.airline_id=al.airline_id
             INNER JOIN gold.dim_airports da ON f.dep_airport_id=da.airport_id
             INNER JOIN gold.dim_airports aa ON f.arr_airport_id=aa.airport_id
-            WHERE (:airline_code IS NULL OR al.icao_code = :airline_code OR al.airline_name ILIKE :airline_name)
-            AND (:origin_airport IS NULL OR da.icao_code = :origin_airport)
-            AND (:destination_airport IS NULL OR aa.icao_code  = :destination_airport)
-            AND ((:start_hour IS NULL OR dep_time >= :start_hour) OR (:end_hour IS NULL OR arr_time <= :end_hour))
+            WHERE (:airline_name IS NULL OR al.airline_name ILIKE :airline_name)
+            AND (:origin_airport IS NULL OR da.iata_code = :origin_airport)
+            AND (:destination_airport IS NULL OR aa.iata_code  = :destination_airport)
+            AND ((:start_hour IS NULL OR dep_time >= :start_hour) AND (:end_hour IS NULL OR dep_time < :end_hour))
+            AND (:dow IS NULL OR dow = :dow)
+            {code_cond}
             ORDER BY dep_time DESC NULLS LAST
             LIMIT :limit OFFSET :offset
         """
+
+        if (search.airline_name is None and search.airline_codes is None) or search.destination_airport is None or search.origin_airport is None or search.flight_date is None : raise HTTPException("Manque un paramètre obligatoire")
+
+        params = {
+                        "airline_codes": search.airline_codes if search.airline_codes is not None else None,
+                        "airline_name": f"'%{search.airline_name}%'" if search.airline_name else None,
+                        "origin_airport": search.origin_airport,
+                        "destination_airport": search.destination_airport,
+                        "start_hour": f"{search.start_hour:02d}:00",
+                        "end_hour":f"{search.end_hour:02d}:00",
+                        "limit": search.limit,
+                        "offset": search.offset,
+                        "dow":dow
+                    }
+        stmt = text(query)
+        if search.airline_codes:
+            stmt = stmt.bindparams(
+                bindparam("airline_codes", expanding=True)
+            )
         rows = db.execute(
-            text(query),
-            {
-                "airline_code": airline_code,
-                "airline_name": f"'%{airline_code}%'" if airline_code else "",
-                "origin_airport": origin_airport,
-                "destination_airport": destination_airport,
-                "start_hour": start_hour,
-                "end_hour":end_hour,
-                "limit": limit,
-                "offset": offset,
-            },
+            stmt,
+            params
         ).mappings().all()
         data=[Flight(**row) for row in rows]
         return data
