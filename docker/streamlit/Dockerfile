@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 
 # Application
-COPY src/frontend/ .
+COPY src/frontend/ ./src/frontend
 COPY docker/streamlit/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
