@@ -16,10 +16,10 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Application
 COPY src/frontend/ .
-COPY docker/streamlit/entrypoint.sh /app/entrypoint.sh
+COPY docker/streamlit/entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8501
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
