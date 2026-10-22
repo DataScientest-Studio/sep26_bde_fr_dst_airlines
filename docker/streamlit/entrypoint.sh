@@ -2,7 +2,7 @@
 set -eu
 
 mkdir -p /root/.streamlit
-
+rm -rf /root/.streamlit/secrets.toml
 cat > /root/.streamlit/secrets.toml <<EOF
 [auth]
 redirect_uri = "http://localhost:8501/oauth2callback"
