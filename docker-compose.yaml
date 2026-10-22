@@ -292,8 +292,8 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: docker/frontend/Dockerfile
-
+      dockerfile: docker/streamlit/Dockerfile
+    container_name: frontend
     ports:
       - "8501:8501"
 
@@ -308,6 +308,9 @@ services:
 
       # Secrets montés en lecture seule
       - ./src/frontend/.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
+
+      # Model IA monté
+      - ./models:/app/models
 
     restart: unless-stopped
 
