@@ -39,3 +39,16 @@ models:
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['icao', 'time']
+  - name: stg_weather_airports
+    description: "Airports used by AirLabs flights, with coordinates for weather collection"
+    columns:
+      - name: icao
+        tests:
+          - unique
+          - not_null
+      - name: latitude_deg
+        tests:
+          - not_null
+      - name: longitude_deg
+        tests:
+          - not_null
