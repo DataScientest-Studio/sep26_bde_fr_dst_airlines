@@ -34,20 +34,8 @@ models:
         tests:
           - unique
           - not_null
-  - name: stg_opdi_flights
-    description: "OPDI arrivals to Paris airports, cleaned"
-    columns:
-      - name: id
-        tests:
-          - unique
-          - not_null
   - name: stg_weather_hourly
     description: "Hourly weather per airport (UTC)"
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: ['icao', 'time']
-  - name: stg_flight_schedule_ref
-    description: "Scheduled times per flight and route (AirLabs, Paris local time)"
-    tests:
-      - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: ['flt_id', 'adep', 'ades']

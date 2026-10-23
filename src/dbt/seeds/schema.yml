@@ -1,11 +1,13 @@
 version: 2
 
 seeds:
-  - name: icao_corrections
-    description: "Old and new icao code"
+  - name: weather_codes
+    description: "WMO 4677 present weather codes (00-99)"
     columns:
-      - name: old_icao
-        description: "Deprecated icao code"
+      - name: code
+        description: "WMO weather code"
         tests:
           - unique
           - not_null
+      - name: wmo4677
+        description: "Code label"

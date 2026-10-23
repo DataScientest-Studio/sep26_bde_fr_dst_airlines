@@ -26,11 +26,3 @@ models:
         tests:
           - unique
           - not_null
-  - name: fact_flights
-    description: "OPDI arrivals to Paris with scheduled arrival and delay target (>15 min)"
-    columns:
-      - name: id
-        description: "OPDI flight ID"
-        tests:
-          - unique
-          - not_null
