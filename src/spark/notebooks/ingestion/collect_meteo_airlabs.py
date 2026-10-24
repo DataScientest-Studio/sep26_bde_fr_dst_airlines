@@ -7,8 +7,8 @@ and append it to raw.meteo_hourly.
 Steps:
   1. Read config and secrets (same pattern as load_airlabs_schedule_files.py)
   2. Read raw tables: days with flights per airport (raw.airlabs_schedules,
-     dep_icao / arr_icao), compared with the days already complete (24 hours)
-     in raw.meteo_hourly
+     dep_icao / arr_icao, or ICAO found from the IATA code for older rows),
+     compared with the days already complete (24 hours) in raw.meteo_hourly
   3. Build the list of calls (one per airport, covering its missing days)
   4. Call the Open-Meteo archive API
   5. Load the result in a staging table, then INSERT ... ON CONFLICT DO NOTHING
@@ -65,12 +65,21 @@ def list_calls(host, db, user, password, port, end_date, table):
         f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
     )
     sql = f"""
-    with flights as (
-        select dep_icao as icao, cast(dep_time as date) as day
-        from raw.airlabs_schedules where dep_icao is not null
+    with iata_map as (
+        select distinct on (iata_code) iata_code, icao_code
+        from raw.airlabs_airports
+        where iata_code <> '' and icao_code <> ''
+          and icao_code not in ('OPRN', 'UGGG')
+        order by iata_code, icao_code
+    ),
+    flights as (
+        select coalesce(s.dep_icao, d.icao_code) as icao, cast(s.dep_time as date) as day
+        from raw.airlabs_schedules s
+        left join iata_map d on d.iata_code = s.dep_iata
         union
-        select arr_icao, cast(arr_time as date)
-        from raw.airlabs_schedules where arr_icao is not null
+        select coalesce(s.arr_icao, a.icao_code), cast(s.arr_time as date)
+        from raw.airlabs_schedules s
+        left join iata_map a on a.iata_code = s.arr_iata
     ),
     present as (
         select icao, cast(time as date) as day
