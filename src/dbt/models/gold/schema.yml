@@ -26,3 +26,71 @@ models:
         tests:
           - unique
           - not_null
+  - name: dim_weather_codes
+    description: "WMO 4677 weather codes with category (tens) and subcategory (units)"
+    columns:
+      - name: weather_code
+        tests:
+          - unique
+          - not_null
+  - name: fact_weather_hourly
+    description: "Hourly weather per airport for the AirLabs period (UTC)"
+    columns:
+      - name: weather_id
+        tests:
+          - unique
+          - not_null
+      - name: weather_code
+        tests:
+          - relationships:
+              to: ref('dim_weather_codes')
+              field: weather_code
+  - name: fact_flights
+    description: "AirLabs arrivals to Paris, one row per flight, target delay (> 15 min)"
+    columns:
+      - name: schedule_id
+        tests:
+          - unique
+          - not_null
+      - name: arr_airport_id
+        tests:
+          - relationships:
+              to: ref('dim_airports')
+              field: airport_id
+      - name: airline_id
+        tests:
+          - relationships:
+              to: ref('dim_airlines')
+              field: airline_id
+  - name: ml_flights_features
+    description: >
+      Training table: one row per AirLabs flight. Only features known at prediction time
+      (airline, airports, scheduled arrival day and hour, weather at scheduled arrival hour)
+      and the delay target. Actual arrival and delay minutes are excluded (target leakage).
+    columns:
+      - name: schedule_id
+        description: "Flight key (fact_flights)"
+        tests:
+          - unique
+          - not_null
+      - name: sched_arr_utc
+        description: "Scheduled arrival (UTC). Used for a time-based train/test split, not a feature"
+      - name: airline_icao
+        description: "Airline ICAO code"
+      - name: adep
+        description: "Departure airport ICAO code"
+      - name: ades
+        description: "Arrival airport ICAO code (LFPG, LFPO, LFOB)"
+      - name: dow
+        description: "Day of week of scheduled arrival, Paris local time (1 = Monday, 7 = Sunday)"
+      - name: arr_hour_local
+        description: "Hour of scheduled arrival, Paris local time (0-23)"
+      - name: arr_temp_dew_spread
+        description: "Temperature minus dew point at arrival airport (fog indicator)"
+      - name: arr_weather_code
+        description: "WMO 4677 weather code at arrival airport, scheduled arrival hour"
+      - name: delay
+        description: "Target: arrival delay > 15 min (AirLabs arr_delayed, NULL = not delayed)"
+        tests:
+          - not_null
+  
