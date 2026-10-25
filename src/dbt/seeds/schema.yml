@@ -11,3 +11,13 @@ seeds:
           - not_null
       - name: wmo4677
         description: "Code label"
+  - name: airport_corrections
+    description: "Deprecated or wrong ICAO codes and their replacement (ambiguous IATA codes in AirLabs)"
+    columns:
+      - name: old_icao
+        tests:
+          - unique
+          - not_null
+      - name: new_icao
+        tests:
+          - not_null

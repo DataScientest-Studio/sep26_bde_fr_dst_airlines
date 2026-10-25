@@ -6,7 +6,7 @@
       "CREATE INDEX IF NOT EXISTS idx_stg_schedule_flight_icao ON {{ this }} (flight_icao)",
       "GRANT SELECT ON ALL TABLES IN SCHEMA silver TO airline_rw"
     ]) }}
--- Harmonise les heures d'arrivee en UTC (anciens fichiers airlabs_raw/ en UTC, nouveaux en heure locale etiquetee +00)
+
 with harmonized as (
     select a.*,
         case when source_file like 'airlabs_raw/%' then arr_time
@@ -16,7 +16,6 @@ with harmonized as (
     from {{ source('raw', 'airlabs_schedules') }} a
     where status = 'landed'
 ),
--- Recupere les schedules et calcule le rn pour pouvoir supprimer les vol operes par une filiale (on garde le vol commercial)
 schedules as (
     select h.*,
         TO_CHAR(dep_time, 'HH24:MI')  AS dep_hour,
@@ -38,17 +37,18 @@ schedules as (
         ) as rn
         from harmonized h
 ),
--- Garde que les vols commerciaux
 dedup_schedules as (
     select *
     from schedules
     where rn = 1
 ),
--- Recupere les aeroports pour ajoute l'airport id
-airports as (SELECT * FROM {{ref('stg_airports')}}),
--- Recupere les compagnies pour ajoute l'airline id
+airports as (
+    SELECT a.*
+    FROM {{ref('stg_airports')}} a
+    LEFT JOIN {{ref('airport_corrections')}} c ON a.icao_code = c.old_icao
+    WHERE c.old_icao IS NULL
+),
 airlines as (SELECT * FROM {{ref('stg_airlines')}}),
--- Requete finale
 final as (
     SELECT DISTINCT
         id,
@@ -60,8 +60,8 @@ final as (
             'arr_hour',
             'al.airline_id',
             's.dow'
-        ]) }} AS flight_id,   -- Calcul l'ID du Vol (comme fait dans stg_flights)
-		s.flight_icao,
+        ]) }} AS flight_id,
+        s.flight_icao,
         al.airline_id as airline_id,
         s.airline_icao,
         da.airport_id as dep_airport_id,
