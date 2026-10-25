@@ -1,7 +1,6 @@
 {{ config(materialized='table', schema='gold',
     post_hook=["GRANT SELECT ON {{ this }} TO airline_rw"]) }}
 
--- One row per AirLabs flight, target = arrival delay > 15 min (delay computed by AirLabs)
 select
     id as schedule_id,
     flight_id,
@@ -17,9 +16,8 @@ select
     date_trunc('hour', arr_time) as arr_hour,
     extract(isodow from arr_time at time zone 'Europe/Paris') as dow,
     extract(hour from arr_time at time zone 'Europe/Paris') as arr_hour_local,
-    delayed as arr_delay_min,
-        case
-        when delayed is null then null
+    coalesce(delayed, 0) as arr_delay_min,
+    case
         when delayed > 15 then true
         else false
     end as delay
