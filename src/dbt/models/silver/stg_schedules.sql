@@ -4,7 +4,7 @@
       "CREATE INDEX IF NOT EXISTS idx_stg_schedule_arr_airport ON {{ this }} (arr_airport_id)",
       "CREATE INDEX IF NOT EXISTS idx_stg_schedule_airline ON {{ this }} (airline_id)",
       "CREATE INDEX IF NOT EXISTS idx_stg_schedule_flight_icao ON {{ this }} (flight_icao)",
-      "GRANT SELECT ON ALL TABLES IN SCHEMA silver TO airline_rw"
+      "GRANT SELECT ON {{ this }} TO airline_rw"
     ]) }}
 
 with harmonized as (
