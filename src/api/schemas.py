@@ -3,29 +3,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class FlightPredictionInput(BaseModel):
-    airline_code: str = Field(..., example="AF", description="Code IATA de la compagnie")
-    origin_airport: str = Field(..., example="CDG", description="Aéroport de départ")
-    destination_airport: str = Field(..., example="JFK", description="Aéroport d'arrivée")
-    month: int = Field(..., ge=1, le=12, example=7)
-    day_of_week: int = Field(..., ge=1, le=7, example=5)
-    scheduled_departure_hour: int = Field(..., ge=0, le=23, example=14)
-    distance: float = Field(..., gt=0, example=5834.0)
-
-
-class BatchPredictionInput(BaseModel):
-    flights: List[FlightPredictionInput]
-
-
-class PredictionOutput(BaseModel):
-    predicted_delay_minutes: float
-    is_delayed: bool
-    delay_probability: Optional[float] = None
-
-
-class BatchPredictionOutput(BaseModel):
-    predictions: List[PredictionOutput]
-
 
 class Airport(BaseModel):
     """ Store Airport information """
@@ -51,12 +28,26 @@ class Flight(BaseModel):
     flight_id: Optional[str] =Field( default=None, description="Unique internal flight identifier")
     flight_icao:Optional[str] =Field( default=None, description="Flight ICAO Code") 
     airline_icao:Optional[str] =Field( default=None, description="Airline ICAO Code")
+    airline_iata:Optional[str] =Field( default=None, description="Airline IATA Code")
     airline_name:Optional[str] =Field( default=None, description="Airline Name")
     flight_number:Optional[str] =Field( default=None, description="Flight Number"), 
     dep_icao:Optional[str] =Field( default=None, description="Departure Airport IATA Code")
     arr_icao:Optional[str] =Field( default=None, description="Arrival Airport IATA Code")
     arr_time:Optional[str] =Field( default=None, description="Arrival Time")
     dep_time:Optional[str] =Field( default=None, description="Departure Time")
+    dep_iata:Optional[str] =Field( default=None, description="Departure Airport IATA Code")
+    arr_iata:Optional[str] =Field( default=None, description="Arrival Airport IATA Code")
+    dow:Optional[int] =Field(  description="Day of week")
+    month:Optional[int]=Field(  description="Month of flight")
+    day:Optional[int]=Field(  description="Day of flight")
+    year:Optional[int]=Field(  description="Year of flight")
+    flight_date:Optional[str] =Field( default=None, description="Departure Date of flight")
+    dep_country:Optional[str] =Field( default=None, description="Country ISOCode of Departure airport")
+    dep_lat:Optional[str] =Field( default=None, description="Latitude of departure Airport")
+    dep_lng:Optional[str] =Field( default=None, description="Longitude of departure Airport")
+    arr_country:Optional[str] =Field( default=None, description="Country ISOCode of Arrival airport")
+    arr_lat:Optional[str] =Field( default=None, description="Latitude of arrival Airport")
+    arr_lng:Optional[str] =Field( default=None, description="Longitude of arrival Airport")
     
 class FlightSearch(BaseModel):
     airline_name: str | None = None
@@ -76,3 +67,23 @@ class StatsOut(BaseModel):
     avg_arrival_delay: float
     delayed_flights_rate: float
     cancellation_rate: float
+
+
+class FlightPredictionInput(BaseModel):
+    flight:Flight
+    
+
+
+class BatchPredictionInput(BaseModel):
+    flights: List[FlightPredictionInput]
+
+
+class PredictionOutput(BaseModel):
+    predicted_delay_minutes: float
+    is_delayed: bool
+    delay_probability: Optional[float] = None
+
+
+class BatchPredictionOutput(BaseModel):
+    predictions: List[PredictionOutput]
+

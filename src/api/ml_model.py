@@ -6,18 +6,25 @@ import pandas as pd
 from fastapi import HTTPException, status
 from src.api.config import settings
 from src.api.schemas import FlightPredictionInput, PredictionOutput
-
+from sqlalchemy import create_engine
+from .database import get_db
 logger = logging.getLogger(__name__)
 
 
 class MLModelManager:
-    def __init__(self) -> None:
+    def __init__(self, db) -> None:
         self.model = None
+        self.db = db
 
     def load_model(self) -> None:
         """Charge le modèle Scikit-Learn au démarrage de l'API."""
-        if os.path.exists(settings.MODEL_PATH):
-            self.model = joblib.load(settings.MODEL_PATH)
+
+        # Get model to use from DB
+        model_path = settings.MODEL_PATH
+
+
+        if os.path.exists(model_path):
+            self.model = joblib.load(model_path)
             logger.info(f"Modèle Scikit-Learn chargé depuis {settings.MODEL_PATH}")
         else:
             logger.warning(f"Fichier modèle introuvable ({settings.MODEL_PATH}).")
@@ -26,6 +33,18 @@ class MLModelManager:
         if not inputs:
             return []
 
+        # Get data of flight in DB
+        predicts = []
+        for predict in inputs:
+            item=predict.flight.model_dump()   # Convert object in dict
+            
+            # Call Meteo
+            # item["dep_weather"]=...
+
+            # TO DO prepare model params
+            predicts.append(item)
+
+        # create DF    
         df = pd.DataFrame([item.model_dump() for item in inputs])
 
         if self.model is None:
@@ -51,4 +70,4 @@ class MLModelManager:
         return results
 
 
-ml_manager = MLModelManager()
+ml_manager = MLModelManager(db=get_db())

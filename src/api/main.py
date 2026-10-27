@@ -22,8 +22,10 @@ from src.api.schemas import (
     FlightSearch
 )
 from src.api.security import verify_api_key
+import random
 
 
+# Charge le model en cache au demarrage de l'API
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ml_manager.load_model()
@@ -48,9 +50,13 @@ app.add_middleware(
 
 
 @app.post("/predict", response_model=PredictionOutput, tags=["ML Inference"])
-def predict_single_flight(payload: FlightPredictionInput):
+def predict_single_flight(payload: FlightPredictionInput,
+                    db: Session = Depends(get_db),):
     """Prédit le retard d'un vol unique avec le modèle Scikit-Learn."""
-    return ml_manager.predict([payload])[0]
+    #return ml_manager.predict([payload])[0]
+    retard=random.random() > 0.8
+    r = PredictionOutput(predicted_delay_minutes=random.random()*30 if retard else 0, is_delayed=retard, delay_probability=random.random() if retard else 1)
+    return r
 
 
 @app.post("/predict-batch", response_model=BatchPredictionOutput, tags=["ML Inference"])
@@ -65,35 +71,45 @@ def get_flights(
     db: Session = Depends(get_db),
 ):
 
-    """         "airline_code": airline_code,
-                "origin_airport": origin_airport,
-                "destination_airport": destination_airport,
-                "month": int(month),
-                "day_of_week": int(day_of_week),
-                "scheduled_departure_hour": int(scheduled_departure_hour)"""
-    """Récupère la liste des vols depuis PostgreSQL avec filtres optionnels."""
+    """  Récupère la liste des vols depuis PostgreSQL avec filtres optionnels."""
     try:
         if search.flight_date:
             date_obj = datetime.strptime(search.flight_date,"%Y-%m-%d" ).date()
 
             dow = (date_obj.weekday() + 1) % 8  # Start Sunday
+            day = date_obj.day
+            month = date_obj.month
+            year= date_obj.year
+
         if search.airline_codes is not None and len(search.airline_codes)>0:
             code_cond = " AND (al.icao_code IN :airline_codes)"
         else:
             code_cond =''
         query = f"""
             SELECT
-                flight_id,
-                flight_icao, 
-                al.icao_code as airport_icao, 
+                f.flight_id,
+                f.flight_icao, 
+                al.icao_code as airline_icao, 
+                al.iata_code AS airline_iata,
                 al.airline_name,
-                flight_number, 
+                f.flight_number, 
                 da.icao_code as dep_icao, 
                 aa.icao_code as arr_icao, 
                 da.iata_code as dep_iata, 
                 aa.iata_code as arr_iata, 
-                dep_time,
-                arr_time 
+                f.dep_time,
+                f.arr_time,
+                f.dow,
+                :day as day,
+                :month as month,
+                :year as year,
+                :flight_date as flight_date,
+                da.country_code AS dep_country,
+                da.lat AS dep_lat,
+                da.lng as dep_lng,
+                aa.country_code AS arr_country,
+                aa.lat  AS arr_lat,
+                aa.lng  AS arr_lng
             FROM gold.dim_flights f
             INNER JOIN gold.dim_airlines al ON f.airline_id=al.airline_id
             INNER JOIN gold.dim_airports da ON f.dep_airport_id=da.airport_id
@@ -119,7 +135,11 @@ def get_flights(
                         "end_hour":f"{search.end_hour:02d}:00",
                         "limit": search.limit,
                         "offset": search.offset,
-                        "dow":dow
+                        "dow":dow,
+                        "day":day,
+                        "month":month,
+                        "year":year,
+                        "flight_date":search.flight_date
                     }
         stmt = text(query)
         if search.airline_codes:
@@ -160,7 +180,7 @@ def get_airports(
         rows = db.execute(text(query), {"search": search, "pattern": pattern, "country":country}).mappings().all()
         return [Airport(**row) for row in rows]
     except Exception as e:
-        raise HTTPException(f"Error getting Airports : {e}")
+        raise HTTPException(detail=f"Error getting Airports : {e}")
 
 
 @app.get("/airlines", response_model=List[Airline], tags=["Reference Data"])
@@ -175,7 +195,7 @@ def get_airlines(search: Optional[str] = Query(None),db: Session = Depends(get_d
         rows = db.execute(text(query),{"search": search, "pattern": pattern}).mappings().all()
         return [Airline(**row) for row in rows]
     except Exception as e:
-        raise HTTPException(f"Error getting Airlines : {e}")
+        raise HTTPException(detail=f"Error getting Airlines : {e}")
 
 
 @app.get("/stats", response_model=StatsOut, tags=["Analytics"])

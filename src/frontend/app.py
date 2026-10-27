@@ -3,6 +3,8 @@ from src.frontend.auth import check_google_auth, render_user_sidebar
 from src.frontend.views import predict_batch, predict_single, references, statistics
 from streamlit_option_menu import option_menu
 
+st.write(st.__version__)
+
 st.set_page_config(
     page_title="Liora Airlines — Dashboard & ML",
     page_icon="✈️",
