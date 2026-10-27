@@ -2,9 +2,22 @@
 # coding: utf-8
 """
 Train delay prediction models (scikit-learn) and store their scores.
+
+Steps:
+  1. Read config and secrets (shared config.json of the ingestion folder)
+  2. Read gold.ml_flights_features into a pandas DataFrame
+  3. Prepare data: drop flights without weather, train/test split by random whole days
+     (no day shared between train and test), preprocessing (one-hot for categories,
+     numeric columns passed through)
+  4. Train a RandomForest and an XGBoost, each in a Pipeline (preprocessing + model),
+     named type_YYYYMMDD_HHMM
+  (next steps to come: evaluate, save models, store results)
 """
 from pathlib import Path
 import os, sys
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -14,6 +27,10 @@ from sqlalchemy import create_engine, text
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.base import clone
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 
 is_local = os.getenv("RUN_ENV") != "docker"
 
@@ -94,6 +111,48 @@ def prepare_data(df):
     return X_train, X_test, y_train, y_test, preprocessor
 
 
+# Train the models
+def train_models(X_train, y_train, preprocessor, run_stamp):
+    """ Train one Pipeline (preprocessing + model) per model type.
+        @param run_stamp : YYYYMMDD_HHMM, shared by all models of the same run
+        @return dict {model_name: (model_type, fitted pipeline, training duration in s)}
+    """
+    nb_on_time = int((y_train == 0).sum())
+    nb_delayed = int((y_train == 1).sum())
+    pos_weight = nb_on_time / nb_delayed
+
+    estimators = {
+        "rf": RandomForestClassifier(
+            n_estimators=300,
+            class_weight="balanced",
+            n_jobs=-1,
+            random_state=RANDOM_STATE,
+        ),
+        "xgb": XGBClassifier(
+            n_estimators=300,
+            max_depth=6,
+            learning_rate=0.1,
+            scale_pos_weight=pos_weight,
+            n_jobs=-1,
+            random_state=RANDOM_STATE,
+        ),
+    }
+
+    models = {}
+    for model_type, estimator in estimators.items():
+        model_name = f"{model_type}_{run_stamp}"
+        pipeline = Pipeline([
+            ("preprocessing", clone(preprocessor)),
+            ("model", estimator),
+        ])
+        start = time.time()
+        pipeline.fit(X_train, y_train)
+        duration = time.time() - start
+        models[model_name] = (model_type, pipeline, duration)
+        print(f"  + {model_name} trained in {duration:.1f} s")
+    return models
+
+
 # Entry point
 if __name__ == "__main__":
     try:
@@ -113,6 +172,10 @@ if __name__ == "__main__":
 
         # Prepare data
         X_train, X_test, y_train, y_test, preprocessor = prepare_data(df)
+
+        # Train the models
+        run_stamp = datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d_%H%M")
+        models = train_models(X_train, y_train, preprocessor, run_stamp)
 
         print("Training finished")
         sys.exit(0)
