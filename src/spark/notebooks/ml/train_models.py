@@ -14,13 +14,13 @@ Steps:
   5. Evaluate each model on the test set: confusion matrix (TP, FP, TN, FN),
      precision, recall, F1 (delay class) and ROC AUC
   6. Save each fitted pipeline with joblib in MODELS_DIR as <model_name>.joblib
-  (next step to come: store results)
+  7. Store one row per model in RESULTS_TABLE (created if needed, readable by airline_rw).
+     deployed_at is left empty: it is filled by deploy_model.py
 """
 from pathlib import Path
 import os, sys
 import time
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -48,6 +48,7 @@ is_local = os.getenv("RUN_ENV") != "docker"
 CONFIG_FILE = str(Path(__file__).resolve().parent.parent / "ingestion" / "config.json")
 FEATURES_TABLE = "gold.ml_flights_features"
 MODELS_DIR = Path("/app/workspace/models")
+RESULTS_TABLE = "ml.model_runs"
 
 TARGET = "delay"
 CATEGORICAL_FEATURES = ["airline_icao", "adep", "ades"]
@@ -91,9 +92,9 @@ def read_features(host, db, user, password, port, table):
 # Prepare data for training
 def prepare_data(df):
     """ Drop flights without weather, split train/test by random whole days
-        (Paris local date of the scheduled arrival) and build the preprocessing step
+        (UTC date of the scheduled arrival) and build the preprocessing step
         shared by all models.
-        @return X_train, X_test, y_train, y_test, preprocessor
+        @return X_train, X_test, y_train, y_test, preprocessor, split_info
     """
     nb_before = len(df)
     df = df.dropna(subset=["arr_temperature_2m"]).copy()
@@ -101,7 +102,7 @@ def prepare_data(df):
 
     df["dow"] = df["dow"].astype(int)
     df["arr_hour_local"] = df["arr_hour_local"].astype(int)
-    days = df["sched_arr_utc"].dt.tz_convert("Europe/Paris").dt.date
+    days = df["sched_arr_utc"].dt.date
 
     X = df[CATEGORICAL_FEATURES + NUMERIC_FEATURES]
     y = df[TARGET].astype(int)
@@ -112,15 +113,23 @@ def prepare_data(df):
     y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
     test_days = sorted(days.iloc[test_idx].unique())
-    print(f"Train : {len(X_train)} row(s), {days.iloc[train_idx].nunique()} day(s), {y_train.mean():.1%} delayed")
-    print(f"Test  : {len(X_test)} row(s), {len(test_days)} day(s), {y_test.mean():.1%} delayed")
+    split_info = {
+        "train_rows": len(X_train),
+        "test_rows": len(X_test),
+        "train_days": int(days.iloc[train_idx].nunique()),
+        "test_days": len(test_days),
+        "train_delay_rate": float(y_train.mean()),
+        "test_delay_rate": float(y_test.mean()),
+    }
+    print(f"Train : {split_info['train_rows']} row(s), {split_info['train_days']} day(s), {y_train.mean():.1%} delayed")
+    print(f"Test  : {split_info['test_rows']} row(s), {split_info['test_days']} day(s), {y_test.mean():.1%} delayed")
     print(f"Test days : {', '.join(str(d) for d in test_days)}")
 
     preprocessor = ColumnTransformer([
         ("categories", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL_FEATURES),
         ("numeric", "passthrough", NUMERIC_FEATURES),
     ])
-    return X_train, X_test, y_train, y_test, preprocessor
+    return X_train, X_test, y_train, y_test, preprocessor, split_info
 
 
 # Train the models
@@ -209,6 +218,71 @@ def save_models(models, models_dir):
     return paths
 
 
+# Store the results
+def store_results(host, db, user, password, port, table, models, scores, paths, split_info, trained_at):
+    """ Create the results table if needed and insert one row per model.
+        A model trained again under the same name overwrites its row.
+        @param table : schema.table of the results
+    """
+    engine = create_engine(
+        f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
+    )
+    schema = table.split(".")[0]
+    with engine.begin() as conn:
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema};"))
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {table} (
+                model_name        varchar PRIMARY KEY,
+                model_type        varchar NOT NULL,
+                trained_at        timestamptz NOT NULL,
+                train_rows        integer,
+                test_rows         integer,
+                train_days        integer,
+                test_days         integer,
+                train_delay_rate  double precision,
+                test_delay_rate   double precision,
+                tp                integer,
+                fp                integer,
+                tn                integer,
+                fn                integer,
+                precision         double precision,
+                recall            double precision,
+                f1                double precision,
+                roc_auc           double precision,
+                training_seconds  double precision,
+                model_path        varchar,
+                deployed_at       timestamptz
+            );"""))
+        conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO airline_rw;"))
+        conn.execute(text(f"GRANT SELECT ON {table} TO airline_rw;"))
+
+        columns = [
+            "model_name", "model_type", "trained_at",
+            "train_rows", "test_rows", "train_days", "test_days",
+            "train_delay_rate", "test_delay_rate",
+            "tp", "fp", "tn", "fn", "precision", "recall", "f1", "roc_auc",
+            "training_seconds", "model_path",
+        ]
+        updates = ", ".join(f"{c} = excluded.{c}" for c in columns if c != "model_name")
+        sql = text(f"""
+            INSERT INTO {table} ({", ".join(columns)})
+            VALUES ({", ".join(":" + c for c in columns)})
+            ON CONFLICT (model_name) DO UPDATE SET {updates};""")
+
+        for model_name, (model_type, pipeline, duration) in models.items():
+            row = {
+                "model_name": model_name,
+                "model_type": model_type,
+                "trained_at": trained_at,
+                **split_info,
+                **scores[model_name],
+                "training_seconds": duration,
+                "model_path": paths[model_name],
+            }
+            conn.execute(sql, row)
+            print(f"  + {model_name} stored in {table}")
+
+
 # Entry point
 if __name__ == "__main__":
     try:
@@ -227,10 +301,11 @@ if __name__ == "__main__":
         df = read_features(PG_HOST, PG_DB, PG_USER, password, PG_PORT, FEATURES_TABLE)
 
         # Prepare data
-        X_train, X_test, y_train, y_test, preprocessor = prepare_data(df)
+        X_train, X_test, y_train, y_test, preprocessor, split_info = prepare_data(df)
 
         # Train the models
-        run_stamp = datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d_%H%M")
+        trained_at = datetime.now(timezone.utc)
+        run_stamp = trained_at.strftime("%Y%m%d_%H%M")
         models = train_models(X_train, y_train, preprocessor, run_stamp)
 
         # Evaluate the models
@@ -238,6 +313,10 @@ if __name__ == "__main__":
 
         # Save the models
         paths = save_models(models, MODELS_DIR)
+
+        # Store the results
+        store_results(PG_HOST, PG_DB, PG_USER, password, PG_PORT, RESULTS_TABLE,
+                      models, scores, paths, split_info, trained_at)
 
         print("Training finished")
         sys.exit(0)
