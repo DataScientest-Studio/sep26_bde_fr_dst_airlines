@@ -11,7 +11,9 @@ Steps:
      numeric columns passed through)
   4. Train a RandomForest and an XGBoost, each in a Pipeline (preprocessing + model),
      named type_YYYYMMDD_HHMM
-  (next steps to come: evaluate, save models, store results)
+  5. Evaluate each model on the test set: confusion matrix (TP, FP, TN, FN),
+     precision, recall, F1 (delay class) and ROC AUC
+  (next steps to come: save models, store results)
 """
 from pathlib import Path
 import os, sys
@@ -31,6 +33,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+from sklearn.metrics import (
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+)
 
 is_local = os.getenv("RUN_ENV") != "docker"
 
@@ -153,6 +162,34 @@ def train_models(X_train, y_train, preprocessor, run_stamp):
     return models
 
 
+# Evaluate the models
+def evaluate_models(models, X_test, y_test):
+    """ Score each model on the test set (threshold 0.5 on the delay probability).
+        @return dict {model_name: scores}
+    """
+    results = {}
+    print(f"Reference (always 'on time') : recall 0.000, {y_test.mean():.1%} of test flights delayed")
+    for model_name, (model_type, pipeline, duration) in models.items():
+        y_pred = pipeline.predict(X_test)
+        y_proba = pipeline.predict_proba(X_test)[:, 1]
+        tn, fp, fn, tp = confusion_matrix(y_test, y_pred, labels=[0, 1]).ravel()
+        scores = {
+            "tp": int(tp),
+            "fp": int(fp),
+            "tn": int(tn),
+            "fn": int(fn),
+            "precision": float(precision_score(y_test, y_pred, zero_division=0)),
+            "recall": float(recall_score(y_test, y_pred, zero_division=0)),
+            "f1": float(f1_score(y_test, y_pred, zero_division=0)),
+            "roc_auc": float(roc_auc_score(y_test, y_proba)),
+        }
+        results[model_name] = scores
+        print(f"  {model_name} : TP {tp}  FP {fp}  TN {tn}  FN {fn}  | "
+              f"precision {scores['precision']:.3f}  recall {scores['recall']:.3f}  "
+              f"F1 {scores['f1']:.3f}  AUC {scores['roc_auc']:.3f}")
+    return results
+
+
 # Entry point
 if __name__ == "__main__":
     try:
@@ -176,6 +213,9 @@ if __name__ == "__main__":
         # Train the models
         run_stamp = datetime.now(ZoneInfo("Europe/Paris")).strftime("%Y%m%d_%H%M")
         models = train_models(X_train, y_train, preprocessor, run_stamp)
+
+        # Evaluate the models
+        scores = evaluate_models(models, X_test, y_test)
 
         print("Training finished")
         sys.exit(0)
