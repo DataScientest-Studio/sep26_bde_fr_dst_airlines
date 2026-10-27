@@ -13,7 +13,8 @@ Steps:
      named type_YYYYMMDD_HHMM
   5. Evaluate each model on the test set: confusion matrix (TP, FP, TN, FN),
      precision, recall, F1 (delay class) and ROC AUC
-  (next steps to come: save models, store results)
+  6. Save each fitted pipeline with joblib in MODELS_DIR as <model_name>.joblib
+  (next step to come: store results)
 """
 from pathlib import Path
 import os, sys
@@ -24,6 +25,7 @@ from zoneinfo import ZoneInfo
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 sys.path.append(str(Path(__file__).resolve().parent))
 from common import Config
+import joblib
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sklearn.model_selection import GroupShuffleSplit
@@ -45,6 +47,7 @@ is_local = os.getenv("RUN_ENV") != "docker"
 
 CONFIG_FILE = str(Path(__file__).resolve().parent.parent / "ingestion" / "config.json")
 FEATURES_TABLE = "gold.ml_flights_features"
+MODELS_DIR = Path("/app/workspace/models")
 
 TARGET = "delay"
 CATEGORICAL_FEATURES = ["airline_icao", "adep", "ades"]
@@ -132,7 +135,7 @@ def train_models(X_train, y_train, preprocessor, run_stamp):
 
     estimators = {
         "rf": RandomForestClassifier(
-            n_estimators=300,
+            n_estimators=100,
             class_weight="balanced",
             n_jobs=-1,
             random_state=RANDOM_STATE,
@@ -190,6 +193,22 @@ def evaluate_models(models, X_test, y_test):
     return results
 
 
+# Save the models
+def save_models(models, models_dir):
+    """ Save each fitted pipeline (preprocessing + model) with joblib.
+        @param models_dir : folder (created if missing)
+        @return dict {model_name: file path}
+    """
+    models_dir.mkdir(parents=True, exist_ok=True)
+    paths = {}
+    for model_name, (model_type, pipeline, duration) in models.items():
+        path = models_dir / f"{model_name}.joblib"
+        joblib.dump(pipeline, path)
+        paths[model_name] = str(path)
+        print(f"  + {model_name} saved to {path} ({path.stat().st_size / 1e6:.1f} MB)")
+    return paths
+
+
 # Entry point
 if __name__ == "__main__":
     try:
@@ -216,6 +235,9 @@ if __name__ == "__main__":
 
         # Evaluate the models
         scores = evaluate_models(models, X_test, y_test)
+
+        # Save the models
+        paths = save_models(models, MODELS_DIR)
 
         print("Training finished")
         sys.exit(0)
