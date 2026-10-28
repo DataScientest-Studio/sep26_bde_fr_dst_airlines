@@ -37,6 +37,7 @@ services:
       - ./src/notebooks:/app/jobs
       - ./src/spark:/app/src
       - /home/airline/workspace/spark:/app/workspace
+      
 
   # ============================================================
   # Jupyter + PySpark
@@ -285,6 +286,7 @@ services:
 
     volumes:
       - ./src/api:/app/src/api
+      - /home/airline/workspace/spark:/app/workspace
 
   # ============================================================
   # Frontend Streamlit
@@ -307,9 +309,6 @@ services:
     volumes:
       # Code source en développement
       - ./src/frontend:/app/src/frontend
-
-      # Model IA monté
-      - ./models:/app/models
 
     restart: unless-stopped
 

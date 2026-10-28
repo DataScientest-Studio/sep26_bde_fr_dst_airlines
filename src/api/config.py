@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("PG_DB", "airline")
 
     # Modèle Scikit-Learn
-    MODEL_PATH: str = os.getenv("MODEL_PATH", "models/model.joblib")
+    MODEL_PATH: str = os.getenv("MODEL_PATH", "/app/workspace/models/model.joblib")
 
     @property
     def database_url(self) -> str:
