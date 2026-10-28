@@ -18,16 +18,18 @@ class MLModelManager:
 
     def load_model(self) -> None:
         """Charge le modèle Scikit-Learn au démarrage de l'API."""
+        try:
+            # Get model to use from DB
+            model_path = settings.MODEL_PATH
 
-        # Get model to use from DB
-        model_path = settings.MODEL_PATH
 
-
-        if os.path.exists(model_path):
-            self.model = joblib.load(model_path)
-            logger.info(f"Modèle Scikit-Learn chargé depuis {settings.MODEL_PATH}")
-        else:
-            logger.warning(f"Fichier modèle introuvable ({settings.MODEL_PATH}).")
+            if os.path.exists(model_path):
+                self.model = joblib.load(model_path)
+                logger.info(f"Modèle Scikit-Learn chargé depuis {settings.MODEL_PATH}")
+            else:
+                logger.warning(f"Fichier modèle introuvable ({settings.MODEL_PATH}).")
+        except Exception as e:
+            logger.critical(f"Error loading Model : {e}")
 
     def predict(self, inputs: List[FlightPredictionInput]) -> List[PredictionOutput]:
         if not inputs:
