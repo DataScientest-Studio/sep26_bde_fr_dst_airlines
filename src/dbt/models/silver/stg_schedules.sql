@@ -48,6 +48,12 @@ airports as (
     LEFT JOIN {{ref('airport_corrections')}} c ON a.icao_code = c.old_icao
     WHERE c.old_icao IS NULL
 ),
+iata_map as (
+    SELECT DISTINCT ON (iata_code) iata_code, icao_code
+    FROM airports
+    WHERE iata_code <> ''
+    ORDER BY iata_code, icao_code
+),
 airlines as (SELECT * FROM {{ref('stg_airlines')}}),
 final as (
     SELECT DISTINCT
@@ -78,8 +84,10 @@ final as (
         s.duration,
         s.arr_delayed as delayed
 FROM dedup_schedules s
-LEFT JOIN airports da ON s.dep_iata=da.iata_code
-LEFT JOIN airports aa ON s.arr_iata=aa.iata_code
+LEFT JOIN iata_map md ON s.dep_iata = md.iata_code
+LEFT JOIN iata_map ma ON s.arr_iata = ma.iata_code
+LEFT JOIN airports da ON da.icao_code = coalesce(s.dep_icao, md.icao_code)
+LEFT JOIN airports aa ON aa.icao_code = coalesce(s.arr_icao, ma.icao_code)
 LEFT JOIN airlines al ON s.airline_icao= al.icao_code
 WHERE s.status = 'landed'
 )
