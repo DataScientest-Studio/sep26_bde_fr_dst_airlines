@@ -6,6 +6,8 @@ from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text, bindparam
 from sqlalchemy.orm import Session
+import os
+import shutil
 
 from src.api.config import settings
 from src.api.database import get_db
