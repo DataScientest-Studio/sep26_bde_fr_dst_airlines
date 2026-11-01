@@ -7,7 +7,7 @@ Steps:
   1. Read config and secrets (shared config.json of the ingestion folder)
   2. Check that the model exists in RESULTS_TABLE and on disk
   3. Copy it to MODELS_DIR/model.joblib, the file loaded by the API
-  4. Set deployed_at for this model and clear it for the previous one
+  4. Set online = true and deployed_at for this model, online = false for all the others
 
 Usage:
   spark-submit deploy_model.py <model_name>      e.g. xgb_20261027_1453
@@ -62,11 +62,14 @@ def copy_model(path, models_dir, deployed_file):
 
 # Mark the deployed model in the results table
 def mark_deployed(engine, table, model_name, deployed_at):
-    """ Only one model has deployed_at set: the one currently used by the API """
+    """ Only one model is online: the one currently used by the API.
+        deployed_at keeps the date of the last deployment of each model.
+    """
     with engine.begin() as conn:
-        conn.execute(text(f"update {table} set deployed_at = null where deployed_at is not null"))
+        conn.execute(text(f"alter table {table} add column if not exists online boolean not null default false"))
+        conn.execute(text(f"update {table} set online = false where online"))
         conn.execute(
-            text(f"update {table} set deployed_at = :deployed_at where model_name = :name"),
+            text(f"update {table} set online = true, deployed_at = :deployed_at where model_name = :name"),
             {"deployed_at": deployed_at, "name": model_name},
         )
     print(f"{model_name} marked as deployed in {table} ({deployed_at:%Y-%m-%d %H:%M} UTC)")

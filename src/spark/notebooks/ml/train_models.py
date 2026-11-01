@@ -15,7 +15,7 @@ Steps:
      precision, recall, F1 (delay class) and ROC AUC
   6. Save each fitted pipeline with joblib in MODELS_DIR as <model_name>.joblib
   7. Store one row per model in RESULTS_TABLE (created if needed, readable by airline_rw).
-     deployed_at is left empty: it is filled by deploy_model.py
+     deployed_at and online are left empty / false: they are set by deploy_model.py
 """
 from pathlib import Path
 import os, sys
@@ -251,8 +251,10 @@ def store_results(host, db, user, password, port, table, models, scores, paths, 
                 roc_auc           double precision,
                 training_seconds  double precision,
                 model_path        varchar,
-                deployed_at       timestamptz
+                deployed_at       timestamptz,
+                online            boolean NOT NULL DEFAULT false
             );"""))
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS online boolean NOT NULL DEFAULT false;"))
         conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO airline_rw;"))
         conn.execute(text(f"GRANT SELECT ON {table} TO airline_rw;"))
 
