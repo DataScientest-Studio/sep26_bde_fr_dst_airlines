@@ -53,10 +53,11 @@ app.add_middleware(
 def predict_single_flight(payload: FlightPredictionInput,
                     db: Session = Depends(get_db),):
     """Prédit le retard d'un vol unique avec le modèle Scikit-Learn."""
-    #return ml_manager.predict([payload])[0]
-    retard=random.random() > 0.8
-    r = PredictionOutput(predicted_delay_minutes=random.random()*30 if retard else 0, is_delayed=retard, delay_probability=random.random() if retard else 1)
-    return r
+    return ml_manager.predict([payload])[0]
+    #retard=random.random() > 0.8
+    #r = PredictionOutput(predicted_delay_minutes=random.random()*30 if retard else 0, is_delayed=retard, delay_probability=random.random() if retard else 1)
+    #return r
+
 
 
 @app.post("/predict-batch", response_model=BatchPredictionOutput, tags=["ML Inference"])
