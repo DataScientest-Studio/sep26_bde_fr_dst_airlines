@@ -76,3 +76,21 @@ class StatsOut(BaseModel):
     avg_arrival_delay: float
     delayed_flights_rate: float
     cancellation_rate: float
+
+class FlightToPredict(BaseModel):
+    """ Store flight to predict """
+    airline_icao: str = Field(description="Airline ICAO Code")
+    dep_icao: str = Field(description="Departure Airport ICAO Code")
+    arr_icao: str = Field(description="Arrival Airport ICAO Code")
+    flight_date: date = Field(description="Arrival date")
+    # dep_time: str = Field(description="Scheduled departure time (HH:MM)")  # for departure weather, once UTC times are loaded
+    arr_time: str = Field(description="Scheduled arrival time, Paris local time (HH:MM)")
+    model_name: Optional[str] = Field(default=None, description="Model to use, empty for deployed model")
+
+
+
+class FlightPrediction(BaseModel):
+    """ Store prediction result """
+    is_delayed: bool = Field(description="True if delay probability >= 0.5")
+    delay_probability: float = Field(description="Probability of arrival delay > 15 min")
+    model_name: str = Field(description="Model used for the prediction")
