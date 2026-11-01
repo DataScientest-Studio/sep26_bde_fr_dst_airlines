@@ -19,7 +19,8 @@ from src.api.schemas import (
     FlightPredictionInput,
     PredictionOutput,
     StatsOut,
-    FlightSearch
+    FlightSearch,
+    ModelInfo
 )
 from src.api.security import verify_api_key
 import random
