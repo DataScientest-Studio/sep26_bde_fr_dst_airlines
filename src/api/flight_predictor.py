@@ -1,8 +1,8 @@
+import math
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import requests
-from sqlalchemy import text
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 WEATHER_VARIABLES = [
@@ -23,19 +23,14 @@ WEATHER_VARIABLES = [
 ]
 
 
-def get_weather(db, icao, flight_date, arr_time):
+def get_weather(lat, lng, flight_date, arr_time):
     """ Open-Meteo forecast at the arrival airport, for the arrival hour """
-    arrival = datetime.strptime(f"{flight_date} {arr_time}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Europe/Paris"))
+    arrival = datetime.strptime(f"{str(flight_date)[:10]} {arr_time}", "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Europe/Paris"))
     arrival_utc = arrival.astimezone(timezone.utc)
 
-    airport = db.execute(
-        text("SELECT lat, lng FROM gold.dim_airports WHERE icao_code = :icao"),
-        {"icao": icao},
-    ).first()
-
     params = {
-        "latitude": airport.lat,
-        "longitude": airport.lng,
+        "latitude": lat,
+        "longitude": lng,
         "hourly": ",".join(WEATHER_VARIABLES),
         "start_date": arrival_utc.strftime("%Y-%m-%d"),
         "end_date": arrival_utc.strftime("%Y-%m-%d"),
@@ -47,3 +42,31 @@ def get_weather(db, icao, flight_date, arr_time):
 
     i = hourly["time"].index(arrival_utc.strftime("%Y-%m-%dT%H:00"))
     return {var: hourly[var][i] for var in WEATHER_VARIABLES}
+
+
+def build_features(flight, weather):
+    """ One row with the columns of gold.ml_flights_features """
+    arrival = datetime.strptime(f"{str(flight['flight_date'])[:10]} {flight['arr_time']}", "%Y-%m-%d %H:%M")
+    direction = math.radians(weather["wind_direction_10m"])
+    return {
+        "airline_icao": flight["airline_icao"],
+        "adep": flight["dep_icao"],
+        "ades": flight["arr_icao"],
+        "dow": arrival.isoweekday(),
+        "arr_hour_local": arrival.hour,
+        "arr_temperature_2m": weather["temperature_2m"],
+        "arr_temp_dew_spread": weather["temperature_2m"] - weather["dew_point_2m"],
+        "arr_relative_humidity_2m": weather["relative_humidity_2m"],
+        "arr_pressure_msl": weather["pressure_msl"],
+        "arr_cloud_cover": weather["cloud_cover"],
+        "arr_cloud_cover_low": weather["cloud_cover_low"],
+        "arr_cloud_cover_mid": weather["cloud_cover_mid"],
+        "arr_cloud_cover_high": weather["cloud_cover_high"],
+        "arr_wind_speed_10m": weather["wind_speed_10m"],
+        "arr_wind_direction_sin": math.sin(direction),
+        "arr_wind_direction_cos": math.cos(direction),
+        "arr_wind_gusts_10m": weather["wind_gusts_10m"],
+        "arr_precipitation": weather["precipitation"],
+        "arr_snowfall": weather["snowfall"],
+        "arr_weather_code": weather["weather_code"],
+    }

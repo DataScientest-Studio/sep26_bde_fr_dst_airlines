@@ -8,6 +8,7 @@ from src.api.config import settings
 from src.api.schemas import FlightPredictionInput, PredictionOutput
 from sqlalchemy import create_engine
 from .database import get_db
+from .flight_predictor import get_weather, build_features
 logger = logging.getLogger(__name__)
 
 
@@ -39,15 +40,15 @@ class MLModelManager:
         predicts = []
         for predict in inputs:
             item=predict.flight.model_dump()   # Convert object in dict
-            
-            # Call Meteo
-            # item["dep_weather"]=...
 
-            # TO DO prepare model params
-            predicts.append(item)
+            # Call Meteo
+            weather = get_weather(item["arr_lat"], item["arr_lng"], item["flight_date"], item["arr_time"])
+
+            # Prepare model params
+            predicts.append(build_features(item, weather))
 
         # create DF    
-        df = pd.DataFrame([item.model_dump() for item in inputs])
+        df = pd.DataFrame(predicts)
 
         if self.model is None:
             raise HTTPException(
