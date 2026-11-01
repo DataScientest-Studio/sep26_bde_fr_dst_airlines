@@ -68,7 +68,6 @@ class StatsOut(BaseModel):
     delayed_flights_rate: float
     cancellation_rate: float
 
-<<<<<<< HEAD
 
 class FlightPredictionInput(BaseModel):
     flight:Flight
@@ -88,7 +87,6 @@ class PredictionOutput(BaseModel):
 class BatchPredictionOutput(BaseModel):
     predictions: List[PredictionOutput]
 
-=======
 class FlightToPredict(BaseModel):
     """ Store flight to predict """
     airline_icao: str = Field(description="Airline ICAO Code")
@@ -106,4 +104,3 @@ class FlightPrediction(BaseModel):
     is_delayed: bool = Field(description="True if delay probability >= 0.5")
     delay_probability: float = Field(description="Probability of arrival delay > 15 min")
     model_name: str = Field(description="Model used for the prediction")
->>>>>>> pascal/dbt-silver
