@@ -234,3 +234,32 @@ def get_models(db: Session = Depends(get_db)):
     """
     rows = db.execute(text(query)).mappings().all()
     return [ModelInfo(**row) for row in rows]
+
+@app.post("/models/{model_name}/deploy", tags=["ML Inference"])
+def deploy_model(model_name: str, db: Session = Depends(get_db)):
+    """Deploy a model from ml.model_runs and reload it in the API."""
+    row = db.execute(
+        text("SELECT model_name FROM ml.model_runs WHERE model_name = :name"),
+        {"name": model_name},
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Unknown model: {model_name}")
+
+    models_dir = os.path.dirname(settings.MODEL_PATH)
+    path = os.path.join(models_dir, f"{model_name}.joblib")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Model file not found: {path}")
+
+    tmp = settings.MODEL_PATH + ".tmp"
+    shutil.copy2(path, tmp)
+    os.replace(tmp, settings.MODEL_PATH)
+
+    db.execute(text("UPDATE ml.model_runs SET online = false WHERE online"))
+    db.execute(
+        text("UPDATE ml.model_runs SET online = true, deployed_at = now() WHERE model_name = :name"),
+        {"name": model_name},
+    )
+    db.commit()
+
+    ml_manager.load_model()
+    return {"model_name": model_name, "online": True}
