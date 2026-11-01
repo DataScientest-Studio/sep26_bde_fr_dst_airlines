@@ -1,6 +1,7 @@
 from datetime import date
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from datetime import date, datetime
 
 
 
@@ -104,3 +105,14 @@ class FlightPrediction(BaseModel):
     is_delayed: bool = Field(description="True if delay probability >= 0.5")
     delay_probability: float = Field(description="Probability of arrival delay > 15 min")
     model_name: str = Field(description="Model used for the prediction")
+
+class ModelInfo(BaseModel):
+    """ Store trained model information """
+    model_name: str = Field(description="Model name (type_YYYYMMDD_HHMM)")
+    model_type: str = Field(description="rf or xgb")
+    trained_at: datetime = Field(description="Training date (UTC)")
+    roc_auc: Optional[float] = Field(default=None, description="ROC AUC on test set")
+    f1: Optional[float] = Field(default=None, description="F1 on delay class")
+    precision: Optional[float] = Field(default=None, description="Precision on delay class")
+    recall: Optional[float] = Field(default=None, description="Recall on delay class")
+    online: bool = Field(description="True for the model used by the API")

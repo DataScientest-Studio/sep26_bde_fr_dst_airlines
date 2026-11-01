@@ -222,3 +222,14 @@ def get_stats(
         {"airline_code": airline_code, "origin_airport": origin_airport},
     ).mappings().first()
     return StatsOut(**row)
+
+@app.get("/models", response_model=List[ModelInfo], tags=["ML Inference"])
+def get_models(db: Session = Depends(get_db)):
+    """Liste les modèles entraînés (ml.model_runs)."""
+    query = """
+        SELECT model_name, model_type, trained_at, roc_auc, f1, precision, recall, online
+        FROM ml.model_runs
+        ORDER BY trained_at DESC
+    """
+    rows = db.execute(text(query)).mappings().all()
+    return [ModelInfo(**row) for row in rows]
