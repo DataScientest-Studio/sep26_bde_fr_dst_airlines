@@ -81,6 +81,8 @@ def render() -> None:
         )
     else:
         st.subheader(f"Aucun modèle trouvé" )
+
+    # On a selectionné un modele -> Affiche le bouton deployer
     if event.selection.rows:
         idx = event.selection.rows[0]
 
@@ -89,4 +91,5 @@ def render() -> None:
         st.info( f"Modèle sélectionné : {model['model_name']}" )
 
         if st.button("🚀 Déployer"):
+            # Confirme le deploiement
             confirm_deploy(model['model_name'])
