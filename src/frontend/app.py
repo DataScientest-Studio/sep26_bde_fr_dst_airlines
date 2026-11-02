@@ -1,6 +1,6 @@
 import streamlit as st
 from src.frontend.auth import check_google_auth, render_user_sidebar
-from src.frontend.views import predict_batch, predict_single, references, statistics
+from src.frontend.views import predict_batch, predict_single, references, statistics, models
 from streamlit_option_menu import option_menu
 
 st.write(st.__version__)
@@ -27,15 +27,15 @@ def main() -> None:
             menu_title="Navigation",
             options=[
                     "Prédiction un vol",
-                    "Prédiction plusieurs vols",
                     "Statistiques",
-                    "Références",],
+                    "Références",
+                    "Modèles"],
             icons=["bullseye",  
-                    "boxes",    
                     "bar-chart",
-                    "book" ],
+                    "book",
+                     "robot" ],
             default_index=0,
-            orientation="horizontal"
+            orientation="vertical"
         )
         
         stat_sub = None
@@ -51,6 +51,7 @@ def main() -> None:
                 "Table à afficher",
                 options=["Airlines", "Airports", "Flights"],
             )
+        
 
     render_user_sidebar()
 
@@ -63,7 +64,8 @@ def main() -> None:
         statistics.render(stat_sub or "Modèle (Graphiques)")
     elif main_section == "Références":
         references.render(ref_sub or "Airlines")
-
+    elif main_section == "Modèles":
+        models.render()
 
 if __name__ == "__main__":
     main()

@@ -28,8 +28,10 @@ class APIClient:
             json=payload,
             timeout=30,
         )
-        resp.raise_for_status()
-        return resp.json()
+        if resp.ok:
+            return resp.json()
+        else:
+            raise Exception(resp.text)
 
     def predict_single(self, flight_data: Dict[str, Any]) -> Dict[str, Any]:
         return self._post("/predict", flight_data)
@@ -81,6 +83,13 @@ class APIClient:
             params={"airline_code": airline_code, "origin_airport": origin_airport},
         )
 
+    def get_models(self) -> List[Dict[str, Any]]:
+        """ Get List of Models """
+        return self._get("/models", params={})
+
+    def deploy_model(self, name:str):
+        """ Set active Model """
+        return self._post(f"/models/{name}/deploy", payload={})
 
 api_client = APIClient()
 
@@ -97,5 +106,12 @@ def cached_airlines() -> List[Dict[str, Any]]:
 def cached_airports() -> List[Dict[str, Any]]:
     try:
         return api_client.get_airports()
+    except Exception:
+        return []
+
+@st.cache_data(ttl=300, show_spinner=False)
+def cached_models() -> List[Dict[str, Any]]:
+    try:
+        return api_client.get_models()
     except Exception:
         return []

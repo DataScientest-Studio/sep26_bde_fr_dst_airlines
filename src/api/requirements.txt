@@ -12,7 +12,6 @@ google-auth
 fastapi[standard]
 python-multipart
 httpx
-scikit-learn
 google-cloud-secret-manager
 scikit-learn==1.7.2
 xgboost==3.2.0
