@@ -4,9 +4,14 @@ from datetime import date,datetime, timedelta
 import pandas as pd
 import json
 
+
+event = None
+
 @st.dialog("Confirmation")
 def confirm_deploy(model_name):
-
+    """ Confirmation box 
+        @param name : Name of model
+    """
     st.warning(
         f"Voulez-vous vraiment déployer '{model_name}' ?"
     )
@@ -14,10 +19,13 @@ def confirm_deploy(model_name):
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("✅ Confirmer"):
-            response = api_client.deploy_model(model_name)
-            st.success("Déploiement lancé")
-            st.rerun()
+        if st.button("✅ Confirmer", type="primary"):
+            try:
+                response = api_client.deploy_model(model_name)
+                st.success("Déploiement lancé")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Erreur : {exc}")
 
     with col2:
         if st.button("❌ Annuler"):
