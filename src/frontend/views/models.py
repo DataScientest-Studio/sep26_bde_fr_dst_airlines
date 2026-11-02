@@ -3,6 +3,27 @@ from src.frontend.api_client import api_client, cached_models
 from datetime import date,datetime, timedelta
 import pandas as pd
 import json
+
+@st.dialog("Confirmation")
+def confirm_deploy(model_name):
+
+    st.warning(
+        f"Voulez-vous vraiment déployer '{model_name}' ?"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("✅ Confirmer"):
+            response = api_client.deploy_model(model_name)
+            st.success("Déploiement lancé")
+            st.rerun()
+
+    with col2:
+        if st.button("❌ Annuler"):
+            st.rerun()
+
+
 def render() -> None:
 
     st.title("Gestion des modèles")
@@ -68,27 +89,4 @@ def render() -> None:
         st.info( f"Modèle sélectionné : {model['model_name']}" )
 
         if st.button("🚀 Déployer"):
-            st.session_state.model_to_deploy = model["model_name"]
-
-        if "model_to_deploy" in st.session_state:
-
-            model_name = st.session_state.model_to_deploy
-            
-
-            st.warning(
-                f"Confirmer le déploiement de {model_name} ?"
-            )
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("✅ Confirmer"):
-                    response = api_client.deploy_model(model_name)
-
-                    st.success("Déploiement lancé")
-                    del st.session_state["confirm_deploy"]
-
-            with col2:
-                if st.button("❌ Annuler"):
-                    del st.session_state["confirm_deploy"]
-    
+            confirm_deploy(model['model_name'])
