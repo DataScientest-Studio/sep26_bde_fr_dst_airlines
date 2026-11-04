@@ -37,6 +37,14 @@ sources:
             description: "ICAO of Airline"
           - name: flight_icao
             description: "ICAO code of Flight"
+          - name: dep_time_utc
+            description: "Scheduled departure time (UTC)"
+          - name: arr_time_utc
+            description: "Scheduled arrival time (UTC)"
+          - name: dep_actual_utc
+            description: "Actual departure time (UTC)"
+          - name: arr_actual_utc
+            description: "Actual arrival time (UTC)"
       - name: meteo_hourly
         description: "Hourly weather from Open-Meteo archive"
         columns:
@@ -45,7 +53,4 @@ sources:
               - not_null
           - name: time
             tests:
-              - not_null    
-     
-
-  
+              - not_null
