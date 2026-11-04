@@ -1,4 +1,3 @@
-
 version: 2
 
 models:
@@ -91,4 +90,12 @@ models:
       - name: arr_temp_dew_spread
         description: "Temperature minus dew point at arrival airport (fog indicator)"
       - name: arr_weather_code
-        description: "WMO 4677 weather code at arrival airport,
+        description: "WMO 4677 weather code at arrival airport, scheduled arrival hour"
+      - name: dep_temp_dew_spread
+        description: "Temperature minus dew point at departure airport (fog indicator)"
+      - name: dep_weather_code
+        description: "WMO 4677 weather code at departure airport, scheduled departure hour"
+      - name: delay
+        description: "Target: arrival delay > 15 min (AirLabs arr_delayed, NULL = not delayed)"
+        tests:
+          - not_null
