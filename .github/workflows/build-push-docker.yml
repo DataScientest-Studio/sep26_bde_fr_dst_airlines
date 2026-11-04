@@ -210,7 +210,10 @@ jobs:
           ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" "BRANCH='$BRANCH' bash -s" << 'EOF'
             set -e
             cd /home/airline/repos
-
+            
+            # Authentifie Docker auprès d'Artifact Registry (via le compte de service de la VM)
+            gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+            
             # Se place sur la dernière version de la branche déployée
             git fetch origin "$BRANCH"
             git checkout -B "$BRANCH" FETCH_HEAD
