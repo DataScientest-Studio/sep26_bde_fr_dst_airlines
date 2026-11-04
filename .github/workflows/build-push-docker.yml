@@ -16,21 +16,63 @@ on:
       - ".github/workflows/build-push-docker.yml"  # Ce yml
       - "src/spark/**"      # Les sources python utilisées dans le container spark
       - "src/dbt/**"        # Les DAG pour airflow
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - "requirements.txt"
+      - ".github/workflows/build-push-docker.yml"
   workflow_dispatch:
 
 
 permissions:
   contents: read
-  id-token: write
 
 env:
-  REGISTRY: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline
+  REGISTRY: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline      # Emplacement où sont poussées les images
 
 jobs:
+  # ------------------------------------------------------------
+  # Lint + tests Python (bloque le build et le déploiement)
+  # ------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: src/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+          pip install flake8
+          pip install pytest==8.3.5
+          pip install anyio==4.4.0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with flake8
+        run: |
+          # Stoppe le build sur les erreurs de syntaxe ou les noms non définis
+          flake8 src/spark --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Le reste est un simple avertissement
+          flake8 src/spark --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest src/spark/tests
   # ------------------------------------------------------------
   # Détecte les services dont les sources ont changé
   # ------------------------------------------------------------
   changes:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
@@ -97,9 +139,12 @@ jobs:
   # Build + push uniquement des services modifiés
   # ------------------------------------------------------------
   build-push:
-    needs: changes
-    if: needs.changes.outputs.any == 'true'
+    needs: [test, changes]    # Ne s'execute que si les tests sont passé et qu'on a evalué ce qui a changé
+    if:  ${{ github.event_name != 'pull_request' && needs.changes.outputs.any == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
@@ -139,11 +184,16 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # ------------------------------------------------------------
-  # Déploiement sur la VM (après le build, ou sans build si rien n'a changé)
+  # Déploiement sur la VM (après le build, ou sans build si rien n'a changé) - Si les test sont passés
   # ------------------------------------------------------------
   deploy:
-    needs: [changes, build-push]
-    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.build-push.result != 'failure' }}
+    needs: [test, changes, build-push]
+    if: >-
+      ${{ !cancelled()
+          && github.event_name != 'pull_request'
+          && needs.test.result == 'success'
+          && needs.changes.result == 'success'
+          && needs.build-push.result != 'failure' }}
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-vm
