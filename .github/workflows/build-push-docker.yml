@@ -8,7 +8,7 @@ on:
   push:
     branches:
       - master
-      - Change-docker-architecture   # à retirer après la fusion
+      - change-docker-architecture   # à retirer après la fusion
     paths:      # Trigger si quelque chose a changé dans :
       - "docker/**"         # Le repertoire docker
       - "src/api/**"        # Les sources de l'API 
