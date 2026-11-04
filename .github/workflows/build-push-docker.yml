@@ -159,7 +159,7 @@ jobs:
 
           ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Create Jupyter environment
+      - name: Create environment variables
         env:
           JUPYTER_PASSWORD_HERVE: ${{ secrets.JUPYTER_PASSWORD_HERVE }}
           JUPYTER_PASSWORD_PASCAL: ${{ secrets.JUPYTER_PASSWORD_PASCAL }}

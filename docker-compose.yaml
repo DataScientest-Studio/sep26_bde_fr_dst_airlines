@@ -252,6 +252,7 @@ services:
       PG_DATABASE: airline
       PG_USER: batch
       PG_PASSWORD: ${DBT_BATCH_PASSWORD}
+      POSTGRES_PASSWORD: ${DBT_BATCH_PASSWORD}
       API_KEY: ${FASTAPI_KEY}
 
     restart: unless-stopped
