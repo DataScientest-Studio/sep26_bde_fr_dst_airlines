@@ -1,0 +1,13 @@
+# Ignore certain fichiers et repertoires pour ne pas les copier dans les conteneurs
+.git
+.github
+.env
+**/.env
+**/passwords.json
+**/__pycache__
+**/*.pyc
+.venv
+venv
+docker/postgres
+docker/airflow
+src/spark/tests

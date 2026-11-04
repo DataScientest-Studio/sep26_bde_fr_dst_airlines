@@ -42,4 +42,7 @@ ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
 ENV RUN_ENV=docker
 WORKDIR /app
 
+# Code des jobs Spark embarqué dans l'image (remplace le montage ./src/spark:/app/src)
+COPY src/spark/ /app/src/
+
 CMD ["tail", "-f", "/dev/null"]

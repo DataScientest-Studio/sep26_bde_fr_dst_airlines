@@ -10,6 +10,10 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
       POSTGRES_DB: airline
+      BATCH_PASSWORD: ${DBT_BATCH_PASSWORD}
+      HERVE_PASSWORD: ${PG_HERVE_PASSWORD}
+      PASCAL_PASSWORD: ${PG_PASCAL_PASSWORD}
+      AIRFLOW_DB_PASSWORD: ${PG_AIRFLOW_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -28,14 +32,10 @@ services:
   #              plus pratique et plus "Data Engineer"
   # ============================================================
   spark:
-    build:
-      context: .
-      dockerfile: docker/spark/Dockerfile
+    image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/spark:latest
     container_name: spark
     restart: unless-stopped
     volumes:
-      - ./src/notebooks:/app/jobs
-      - ./src/spark:/app/src
       - /home/airline/workspace/spark:/app/workspace
       
 
@@ -43,11 +43,7 @@ services:
   # Jupyter + PySpark
   # ============================================================
   jupyter:
-    build:
-      context: .
-      dockerfile: docker/jupyter/Dockerfile
-
-    image: liora-jupyter-pyspark
+    image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/jupyter:latest
     container_name: jupyter_pyspark
     restart: unless-stopped
     
@@ -68,10 +64,7 @@ services:
     volumes:
       - /home/airline/workspace/jupyter/notebooks:/home/jovyan/work    # Workspace tored on VM outside repos structure
 
-    #command: >
-    #  start-notebook.py
-    #  "--PasswordIdentityProvider.hashed_password=argon2:$$argon2id$$v=19$$m=10240,t=10,p=8$$/ow7txS+odVsD4ZqIP4Bnw$$V560bJDlDhBrK7xAYgjWReBHWu3IQoMuFDPal+3stfw"
-
+    
   # ============================================================
   # Airflow Init
   # ============================================================
@@ -201,10 +194,7 @@ services:
   # dbt
   # ============================================================
   dbt:
-    build:
-      context: .
-      dockerfile: docker/dbt/Dockerfile
-
+    image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/dbt:latest
     container_name: dbt
     
     environment:
@@ -217,15 +207,6 @@ services:
 
     depends_on:
       - database
-
-    volumes:
-      # Projet DBT
-      - ./src/dbt:/usr/app
-      # Profil DBT
-      - ./docker/dbt/profiles.yml:/root/.dbt/profiles.yml:ro
-
-
-    working_dir: /usr/app
 
     profiles:
       - tools
@@ -262,17 +243,12 @@ services:
   # Fast API
   # ============================================================
   api:
-    build: 
-      context: .
-      dockerfile: docker/fastapi/Dockerfile
+    image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/api:latest
     container_name: airline_api
-
     ports:
       - "8000:8000"
-
     env_file:
       - .env
-
     environment:
       PYTHONPATH: /app
       PG_HOST: database
@@ -280,21 +256,19 @@ services:
       PG_DATABASE: airline
       PG_USER: batch
       PG_PASSWORD: ${DBT_BATCH_PASSWORD}
+      POSTGRES_PASSWORD: ${DBT_BATCH_PASSWORD}
       API_KEY: ${FASTAPI_KEY}
 
     restart: unless-stopped
 
     volumes:
-      - ./src/api:/app/src/api
       - /home/airline/workspace/spark:/app/workspace
 
   # ============================================================
   # Frontend Streamlit
   # ============================================================
   frontend:
-    build:
-      context: .
-      dockerfile: docker/streamlit/Dockerfile
+    image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/frontend:latest
     container_name: frontend
     ports:
       - "8501:8501"
@@ -305,10 +279,6 @@ services:
       COOKIE_SECRET: ${COOKIE_SECRET}
       API_URL: "http://api:8000"
       API_KEY: ${FASTAPI_KEY}
-
-    volumes:
-      # Code source en développement
-      - ./src/frontend:/app/src/frontend
 
     restart: unless-stopped
 

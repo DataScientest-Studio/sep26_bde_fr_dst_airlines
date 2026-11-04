@@ -4,8 +4,8 @@ from typing import List
 import joblib
 import pandas as pd
 from fastapi import HTTPException, status
-from src.api.config import settings
-from src.api.schemas import FlightPredictionInput, PredictionOutput
+from api.config import settings
+from api.schemas import FlightPredictionInput, PredictionOutput
 from sqlalchemy import create_engine
 from .database import get_db
 from .flight_predictor import get_weather, build_features

@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 import os
 import shutil
 
-from src.api.config import settings
-from src.api.database import get_db
-from src.api.ml_model import ml_manager
-from src.api.schemas import (
+from api.config import settings
+from api.database import get_db
+from api.ml_model import ml_manager
+from api.schemas import (
     Airline,
     Airport,
     BatchPredictionInput,
@@ -24,7 +24,7 @@ from src.api.schemas import (
     FlightSearch,
     ModelInfo
 )
-from src.api.security import verify_api_key
+from api.security import verify_api_key
 import random
 
 

@@ -1,0 +1,361 @@
+name: Build and Push Docker Images
+
+# ------------------------------------------------------------
+# On lance le workflow si quelque chose necessitant de refaire 
+# l'image a changé
+# ------------------------------------------------------------
+on:
+  push:
+    branches:
+      - master
+    paths:      # Trigger si quelque chose a changé dans :
+      - "docker/**"         # Le repertoire docker
+      - "src/api/**"        # Les sources de l'API 
+      - "src/frontend/**"   # et du frontend
+      - ".github/workflows/build-push-docker.yml"  # Ce yml
+      - "src/spark/**"      # Les sources python utilisées dans le container spark
+      - "src/dbt/**"        # Les DAG pour airflow
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - "requirements.txt"
+      - ".github/workflows/build-push-docker.yml"
+  workflow_dispatch:
+
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline      # Emplacement où sont poussées les images
+
+jobs:
+  # ------------------------------------------------------------
+  # Lint + tests Python (bloque le build et le déploiement)
+  # ------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: src/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+          pip install flake8
+          pip install pytest==8.3.5
+          pip install anyio==4.4.0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with flake8
+        run: |
+          # Stoppe le build sur les erreurs de syntaxe ou les noms non définis
+          flake8 src/spark --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Le reste est un simple avertissement
+          flake8 src/spark --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest src/spark/tests
+  # ------------------------------------------------------------
+  # Détecte les services dont les sources ont changé
+  # ------------------------------------------------------------
+  changes:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      any: ${{ steps.build-matrix.outputs.any }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |        # Pour chaque service determine si quelque chose à change
+            api:
+              - 'docker/fastapi/**'
+              - 'src/api/**'
+              - '.github/workflows/build-push-docker.yml'
+            frontend:
+              - 'docker/streamlit/**'
+              - 'src/frontend/**'
+              - '.github/workflows/build-push-docker.yml'
+            jupyter:
+              - 'docker/jupyter/**'
+              - '.github/workflows/build-push-docker.yml'
+            spark:
+              - 'docker/spark/**'
+              - '.github/workflows/build-push-docker.yml'
+            dbt:
+              - 'docker/dbt/**'
+              - 'src/dbt/**'
+              - '.github/workflows/build-push-docker.yml'
+            
+      - name: Build matrix          # Defini la liste des service à regenerer
+        id: build-matrix
+        env:
+          ALL: ${{ github.event_name == 'workflow_dispatch' }}
+          API: ${{ steps.filter.outputs.api }}
+          FRONTEND: ${{ steps.filter.outputs.frontend }}
+          JUPYTER: ${{ steps.filter.outputs.jupyter }}
+          SPARK: ${{ steps.filter.outputs.spark }}
+          DBT: ${{ steps.filter.outputs.dbt }}
+        run: |
+          matrix=$(jq -cn \
+            --arg all "$ALL" \
+            --arg api "$API" \
+            --arg frontend "$FRONTEND" \
+            --arg jupyter "$JUPYTER" \
+            --arg dbt "$DBT" \
+            --arg spark "$SPARK" '
+            [
+              {service:"api",      dockerfile:"docker/fastapi/Dockerfile",   changed:$api},
+              {service:"frontend", dockerfile:"docker/streamlit/Dockerfile",  changed:$frontend},
+              {service:"jupyter",  dockerfile:"docker/jupyter/Dockerfile",    changed:$jupyter},
+              {service:"dbt", dockerfile:"docker/dbt/Dockerfile", changed:$dbt},
+              {service:"spark",    dockerfile:"docker/spark/Dockerfile",      changed:$spark}
+            ]
+            | map(select($all == "true" or .changed == "true") | {service, dockerfile})
+            | {include: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "any=$(echo "$matrix" | jq '.include | length > 0')" >> "$GITHUB_OUTPUT"
+          echo "Services à builder : $matrix"
+
+  # ------------------------------------------------------------
+  # Build + push uniquement des services modifiés
+  # ------------------------------------------------------------
+  build-push:
+    needs: [test, changes]    # Ne s'execute que si les tests sont passé et qu'on a evalué ce qui a changé
+    if:  ${{ github.event_name != 'pull_request' && needs.changes.outputs.any == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ------------------------------------------------------------
+  # Déploiement sur la VM (après le build, ou sans build si rien n'a changé) - Si les test sont passés
+  # ------------------------------------------------------------
+  deploy:
+    needs: [test, changes, build-push]
+    if: >-
+      ${{ !cancelled()
+          && github.event_name != 'pull_request'
+          && needs.test.result == 'success'
+          && needs.changes.result == 'success'
+          && needs.build-push.result != 'failure' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-vm
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.GCP_VM_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Create environment variables
+        env:
+          JUPYTER_PASSWORD_HERVE: ${{ secrets.JUPYTER_PASSWORD_HERVE }}
+          JUPYTER_PASSWORD_PASCAL: ${{ secrets.JUPYTER_PASSWORD_PASCAL }}
+          AIRFLOW_DB_CONN: ${{ secrets.AIRFLOW_DB_CONN }}
+          AIRFLOW_JWT_SECRET: ${{ secrets.AIRFLOW_JWT_SECRET }}
+          DBT_BATCH_PASSWORD: ${{ secrets.DBT_BATCH_PASSWORD }}
+          PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+          FASTAPI_KEY: ${{ secrets.FASTAPI_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+          PG_HERVE_PASSWORD: ${{ secrets.HERVE_PASSWORD }}
+          PG_PASCAL_PASSWORD: ${{ secrets.PASCAL_PASSWORD }}
+          PG_AIRFLOW_PASSWORD: ${{ secrets.AIRFLOW_PASSWORD }}
+        run: |
+          {
+            printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
+            printf 'JUPYTER_PASSWORD_PASCAL=%s\n' "$JUPYTER_PASSWORD_PASCAL"
+            printf 'AIRFLOW_DB_CONN=%s\n' "$AIRFLOW_DB_CONN"
+            printf 'AIRFLOW_JWT_SECRET=%s\n' "$AIRFLOW_JWT_SECRET"
+            printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
+            printf 'PG_ADMIN_PASSWORD=%s\n' "$PG_ADMIN_PASSWORD"
+            printf 'FASTAPI_KEY=%s\n' "$FASTAPI_KEY"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'COOKIE_SECRET=%s\n' "$COOKIE_SECRET"
+            printf 'PG_HERVE_PASSWORD=%s\n' "$PG_HERVE_PASSWORD"
+            printf 'PG_PASCAL_PASSWORD=%s\n' "$PG_PASCAL_PASSWORD"
+            printf 'PG_AIRFLOW_PASSWORD=%s\n' "$PG_AIRFLOW_PASSWORD"
+          } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            'cat > /home/airline/repos/.env && chmod 666 /home/airline/repos/.env'
+
+      - name: Create Airflow passwords file
+        env:
+          AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
+        run: |
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
+            mkdir -p /home/airline/repos/docker/airflow
+            rm -rf /home/airline/repos/docker/airflow/passwords.json
+          '
+          echo "$AIRFLOW_PASSWORDS" | \
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            "cat > /home/airline/repos/docker/airflow/passwords.json"
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
+            chown 50000:0 /home/airline/repos/docker/airflow/passwords.json
+            chmod 666 /home/airline/repos/docker/airflow/passwords.json
+
+            ls -l /home/airline/repos/docker/airflow/passwords.json
+          '
+
+      - name: Deploy on VM
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" "BRANCH='$BRANCH' bash -s" << 'EOF'
+            set -e
+            cd /home/airline/repos
+            
+            # Authentifie Docker auprès d'Artifact Registry (via le compte de service de la VM)
+            gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+            
+            # Se place sur la dernière version de la branche déployée
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+
+            # Tire nos 5 images (dbt est sous le profil "tools")
+            docker compose --profile tools pull spark jupyter dbt api frontend
+
+            # Démarre ou met à jour, sans rien construire sur la VM
+            docker compose up -d
+
+            docker compose ps
+            docker image prune -f
+          EOF
+      - name: Smoke tests
+        run: |
+            ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" 'bash -s' << 'EOF'
+                cd /home/airline/repos
+                failed=0
+
+                echo "== Laisse aux services le temps de démarrer =="
+                sleep 20
+
+                echo "== 1. État des conteneurs =="
+                for c in pg_container spark jupyter_pyspark airflow_scheduler \
+                        airflow_api_server airflow_dag_processor portainer \
+                        airline_api frontend; do
+                state=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo missing)
+                restarts=$(docker inspect -f '{{.RestartCount}}' "$c" 2>/dev/null || echo "?")
+                if [ "$state" = "running" ]; then
+                    echo "OK   $c (restarts: $restarts)"
+                else
+                    echo "FAIL $c : $state"
+                    docker logs --tail 30 "$c" 2>&1 || true
+                    failed=1
+                fi
+                done
+
+                echo "== 2. Réponses HTTP (jusqu'à 2 min d'attente par service) =="
+                check_http() {
+                name=$1; url=$2; opts=$3
+                for i in $(seq 1 24); do
+                    if curl -fsS $opts -o /dev/null "$url"; then
+                    echo "OK   $name"; return 0
+                    fi
+                    sleep 5
+                done
+                echo "FAIL $name ($url)"; return 1
+                }
+                check_http "FastAPI"    "http://localhost:8000/docs"                     || failed=1
+                check_http "Streamlit"  "http://localhost:8501/_stcore/health"           || failed=1
+                check_http "JupyterHub" "http://localhost:8888/hub/health"               || failed=1
+                check_http "Airflow"    "http://localhost:8080/api/v2/monitor/health"    || failed=1
+                check_http "Portainer"  "https://127.0.0.1:9443/api/system/status" "-k"  || failed=1
+
+                echo "== 3. PostgreSQL =="
+                if docker exec pg_container pg_isready -U admin -d airline; then
+                echo "OK   PostgreSQL"
+                else
+                echo "FAIL PostgreSQL"; failed=1
+                fi
+
+                echo "== 4. Spark : version, jars et scripts des DAGs =="
+                if docker exec spark /opt/spark/bin/spark-submit --version 2>&1 | grep -q "version" \
+                && docker exec spark test -f /opt/spark-extra-jars/postgresql.jar \
+                && docker exec spark test -f /opt/spark-extra-jars/gcs-connector.jar \
+                && docker exec spark test -f /app/src/notebooks/ingestion/load_airlabs_schedule_files.py \
+                && docker exec spark test -f /app/src/notebooks/ingestion/collect_meteo_airlabs.py; then
+                echo "OK   Spark"
+                else
+                echo "FAIL Spark"; failed=1
+                fi
+
+                echo "== 5. dbt : connexion à la base (même appel que les DAGs, depuis Airflow) =="
+                if docker exec airflow_scheduler docker compose \
+                    -f /home/airline/repos/docker-compose.yaml run --rm dbt dbt debug; then
+                echo "OK   dbt"
+                else
+                echo "FAIL dbt"; failed=1
+                fi
+
+                echo "== 6. Airflow : erreurs d'import des DAGs (informatif) =="
+                docker exec airflow_scheduler airflow dags list-import-errors || true
+
+                if [ "$failed" -ne 0 ]; then
+                echo "Des tests ont échoué."
+                exit 1
+                fi
+                echo "Tous les tests sont passés."
+            EOF
