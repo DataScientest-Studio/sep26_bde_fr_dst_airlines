@@ -1,9 +1,13 @@
 #!/bin/sh
+##########################################
+# Cree fichier profiles.yml
+##########################################
+set -eu
 
 mkdir -p ~/.dbt
 
 cat > ~/.dbt/profiles.yml << EOF
-airline:
+dataplatform:
   target: dev
 
   outputs:

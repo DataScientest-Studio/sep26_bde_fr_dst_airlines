@@ -51,3 +51,7 @@ Project Organization
 --------
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+
+## Notes:
+- .dockerignore : Afin d'eviter d'embarquer l'hitorique git et les autres fichiers...
+- .gitattributes : Pour forcer les fin de ligne en linux sinon risque de crash des .sh au demarrages des containers

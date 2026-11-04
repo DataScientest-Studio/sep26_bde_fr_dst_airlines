@@ -1,0 +1,137 @@
+name: Build and Push Docker Images
+
+# ------------------------------------------------------------
+# On lance le workflow si quelque chose necessitant de refaire 
+# l'image a changé
+# ------------------------------------------------------------
+on:
+  push:
+    branches:
+      - master
+      - Change-docker-architecture   # à retirer après la fusion
+    paths:      # Trigger si quelque chose a changé dans :
+      - "docker/**"         # Le repertoire docker
+      - "src/api/**"        # Les sources de l'API 
+      - "src/frontend/**"   # et du frontend
+      - ".github/workflows/build-push-docker.yml"  # Ce yml
+      - "src/spark/**"      # Les sources python utilisées dans le container spark
+      - "src/dbt/**"        # Les DAG pour airflow
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline
+
+jobs:
+  # ------------------------------------------------------------
+  # Détecte les services dont les sources ont changé
+  # ------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      any: ${{ steps.build-matrix.outputs.any }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |        # Pour chaque service determine si quelque chose à change
+            api:
+              - 'docker/fastapi/**'
+              - 'src/api/**'
+              - '.github/workflows/build-push-docker.yml'
+            frontend:
+              - 'docker/streamlit/**'
+              - 'src/frontend/**'
+              - '.github/workflows/build-push-docker.yml'
+            jupyter:
+              - 'docker/jupyter/**'
+              - '.github/workflows/build-push-docker.yml'
+            spark:
+              - 'docker/spark/**'
+              - '.github/workflows/build-push-docker.yml'
+            dbt:
+              - 'docker/dbt/**'
+              - 'src/dbt/**'
+              - '.github/workflows/build-push-docker.yml'
+      - name: Build matrix          # Defini la liste des service à regenerer
+        id: build-matrix
+        env:
+          ALL: ${{ github.event_name == 'workflow_dispatch' }}
+          API: ${{ steps.filter.outputs.api }}
+          FRONTEND: ${{ steps.filter.outputs.frontend }}
+          JUPYTER: ${{ steps.filter.outputs.jupyter }}
+          SPARK: ${{ steps.filter.outputs.spark }}
+          DBT: ${{ steps.filter.outputs.dbt }}
+        run: |
+          matrix=$(jq -cn \
+            --arg all "$ALL" \
+            --arg api "$API" \
+            --arg frontend "$FRONTEND" \
+            --arg jupyter "$JUPYTER" \
+            --arg dbt "$DBT" \
+            --arg spark "$SPARK" '
+            [
+              {service:"api",      dockerfile:"docker/fastapi/Dockerfile",   changed:$api},
+              {service:"frontend", dockerfile:"docker/streamlit/Dockerfile",  changed:$frontend},
+              {service:"jupyter",  dockerfile:"docker/jupyter/Dockerfile",    changed:$jupyter},
+              {service:"dbt", dockerfile:"docker/dbt/Dockerfile", changed:$dbt},
+              {service:"spark",    dockerfile:"docker/spark/Dockerfile",      changed:$spark}
+            ]
+            | map(select($all == "true" or .changed == "true") | {service, dockerfile})
+            | {include: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "any=$(echo "$matrix" | jq '.include | length > 0')" >> "$GITHUB_OUTPUT"
+          echo "Services à builder : $matrix"
+
+  # ------------------------------------------------------------
+  # Build + push uniquement des services modifiés
+  # ------------------------------------------------------------
+  build-push:
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

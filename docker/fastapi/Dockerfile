@@ -2,11 +2,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY ../../src/api/requirements.txt .
-RUN ls .
+COPY src/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY src/api/ /app/src/api/
 
 ENV PYTHONPATH=/app
 

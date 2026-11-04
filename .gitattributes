@@ -1,0 +1,5 @@
+# Les scripts shell doivent rester en LF, sinon ils plantent dans les conteneurs Linux
+*.sh text eol=lf
+
+# Idem pour les Dockerfiles
+Dockerfile* text eol=lf
