@@ -171,6 +171,9 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+          PG_HERVE_PASSWORD: ${{ secrets.HERVE_PASSWORD }}
+          PG_PASCAL_PASSWORD: ${{ secrets.PASCAL_PASSWORD }}
+          PG_AIRFLOW_PASSWORD: ${{ secrets.AIRFLOW_PASSWORD }}
         run: |
           {
             printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
@@ -183,6 +186,9 @@ jobs:
             printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
             printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
             printf 'COOKIE_SECRET=%s\n' "$COOKIE_SECRET"
+            printf 'PG_HERVE_PASSWORD=%s\n' "$PG_HERVE_PASSWORD"
+            printf 'PG_PASCAL_PASSWORD=%s\n' "$PG_PASCAL_PASSWORD"
+            printf 'PG_AIRFLOW_PASSWORD=%s\n' "$PG_AIRFLOW_PASSWORD"
           } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
             'cat > /home/airline/repos/.env && chmod 666 /home/airline/repos/.env'
 
