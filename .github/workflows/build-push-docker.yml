@@ -18,6 +18,7 @@ on:
       - "src/dbt/**"        # Les DAG pour airflow
   workflow_dispatch:
 
+    
 permissions:
   contents: read
   id-token: write
