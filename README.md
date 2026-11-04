@@ -55,3 +55,12 @@ Project Organization
 ## Notes:
 - .dockerignore : Afin d'eviter d'embarquer l'hitorique git et les autres fichiers...
 - .gitattributes : Pour forcer les fin de ligne en linux sinon risque de crash des .sh au demarrages des containers
+
+## CI/CD
+On utilise github action afin de :
+- Mettre à jour le Google Cloud Run qui collecte les données Airlabs (A faire)
+- Creer les containers et les pousser dans le repos GCP. On ne regénère que les containers qui ont quelque chose qui a changé 
+    - Detecter les services qui ont changé
+    - Generer les images en utilisant les Dockerfile
+    - Pousser les image dans GCP pour les utiliser lors du deploiement
+- Deployer les images sur la VM

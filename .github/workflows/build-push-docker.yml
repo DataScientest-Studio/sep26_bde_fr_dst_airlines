@@ -18,7 +18,7 @@ on:
       - "src/dbt/**"        # Les DAG pour airflow
   workflow_dispatch:
 
-    
+
 permissions:
   contents: read
   id-token: write
@@ -136,3 +136,91 @@ jobs:
             ${{ env.REGISTRY }}/${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ------------------------------------------------------------
+  # Déploiement sur la VM (après le build, ou sans build si rien n'a changé)
+  # ------------------------------------------------------------
+  deploy:
+    needs: [changes, build-push]
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.build-push.result != 'failure' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-vm
+      cancel-in-progress: false
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.GCP_VM_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "${{ secrets.GCP_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Create Jupyter environment
+        env:
+          JUPYTER_PASSWORD_HERVE: ${{ secrets.JUPYTER_PASSWORD_HERVE }}
+          JUPYTER_PASSWORD_PASCAL: ${{ secrets.JUPYTER_PASSWORD_PASCAL }}
+          AIRFLOW_DB_CONN: ${{ secrets.AIRFLOW_DB_CONN }}
+          AIRFLOW_JWT_SECRET: ${{ secrets.AIRFLOW_JWT_SECRET }}
+          DBT_BATCH_PASSWORD: ${{ secrets.DBT_BATCH_PASSWORD }}
+          PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+          FASTAPI_KEY: ${{ secrets.FASTAPI_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+        run: |
+          {
+            printf 'JUPYTER_PASSWORD_HERVE=%s\n' "$JUPYTER_PASSWORD_HERVE"
+            printf 'JUPYTER_PASSWORD_PASCAL=%s\n' "$JUPYTER_PASSWORD_PASCAL"
+            printf 'AIRFLOW_DB_CONN=%s\n' "$AIRFLOW_DB_CONN"
+            printf 'AIRFLOW_JWT_SECRET=%s\n' "$AIRFLOW_JWT_SECRET"
+            printf 'DBT_BATCH_PASSWORD=%s\n' "$DBT_BATCH_PASSWORD"
+            printf 'PG_ADMIN_PASSWORD=%s\n' "$PG_ADMIN_PASSWORD"
+            printf 'FASTAPI_KEY=%s\n' "$FASTAPI_KEY"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'COOKIE_SECRET=%s\n' "$COOKIE_SECRET"
+          } | ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            'cat > /home/airline/repos/.env && chmod 666 /home/airline/repos/.env'
+
+      - name: Create Airflow passwords file
+        env:
+          AIRFLOW_PASSWORDS: ${{ secrets.AIRFLOW_PASSWORDS }}
+        run: |
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
+            mkdir -p /home/airline/repos/docker/airflow
+            rm -rf /home/airline/repos/docker/airflow/passwords.json
+          '
+          echo "$AIRFLOW_PASSWORDS" | \
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" \
+            "cat > /home/airline/repos/docker/airflow/passwords.json"
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" '
+            chown 50000:0 /home/airline/repos/docker/airflow/passwords.json
+            chmod 666 /home/airline/repos/docker/airflow/passwords.json
+
+            ls -l /home/airline/repos/docker/airflow/passwords.json
+          '
+
+      - name: Deploy on VM
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" "BRANCH='$BRANCH' bash -s" << 'EOF'
+            set -e
+            cd /home/airline/repos
+
+            # Se place sur la dernière version de la branche déployée
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+
+            # Tire nos 5 images (dbt est sous le profil "tools")
+            docker compose --profile tools pull spark jupyter dbt api frontend
+
+            # Démarre ou met à jour, sans rien construire sur la VM
+            docker compose up -d
+
+            docker compose ps
+            docker image prune -f
+          EOF

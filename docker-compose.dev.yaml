@@ -1,0 +1,35 @@
+# Développement local : reconstruit les images et monte le code source.
+# Usage : docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
+services:
+  spark:
+    build:
+      context: .
+      dockerfile: docker/spark/Dockerfile
+    volumes:
+      - ./src/spark:/app/src
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/jupyter/Dockerfile
+
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/dbt/Dockerfile
+    volumes:
+      - ./src/dbt:/usr/app
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/fastapi/Dockerfile
+    volumes:
+      - ./src/api:/app/src/api
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/streamlit/Dockerfile
+    volumes:
+      - ./src/frontend:/app/src/frontend
