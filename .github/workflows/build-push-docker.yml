@@ -228,3 +228,79 @@ jobs:
             docker compose ps
             docker image prune -f
           EOF
+      - name: Smoke tests
+        run: |
+            ssh "${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_HOST }}" 'bash -s' << 'EOF'
+                cd /home/airline/repos
+                failed=0
+
+                echo "== Laisse aux services le temps de démarrer =="
+                sleep 20
+
+                echo "== 1. État des conteneurs =="
+                for c in pg_container spark jupyter_pyspark airflow_scheduler \
+                        airflow_api_server airflow_dag_processor portainer \
+                        airline_api frontend; do
+                state=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo missing)
+                restarts=$(docker inspect -f '{{.RestartCount}}' "$c" 2>/dev/null || echo "?")
+                if [ "$state" = "running" ]; then
+                    echo "OK   $c (restarts: $restarts)"
+                else
+                    echo "FAIL $c : $state"
+                    docker logs --tail 30 "$c" 2>&1 || true
+                    failed=1
+                fi
+                done
+
+                echo "== 2. Réponses HTTP (jusqu'à 2 min d'attente par service) =="
+                check_http() {
+                name=$1; url=$2; opts=$3
+                for i in $(seq 1 24); do
+                    if curl -fsS $opts -o /dev/null "$url"; then
+                    echo "OK   $name"; return 0
+                    fi
+                    sleep 5
+                done
+                echo "FAIL $name ($url)"; return 1
+                }
+                check_http "FastAPI"    "http://localhost:8000/docs"                     || failed=1
+                check_http "Streamlit"  "http://localhost:8501/_stcore/health"           || failed=1
+                check_http "JupyterHub" "http://localhost:8888/hub/health"               || failed=1
+                check_http "Airflow"    "http://localhost:8080/api/v2/monitor/health"    || failed=1
+                check_http "Portainer"  "https://127.0.0.1:9443/api/system/status" "-k"  || failed=1
+
+                echo "== 3. PostgreSQL =="
+                if docker exec pg_container pg_isready -U admin -d airline; then
+                echo "OK   PostgreSQL"
+                else
+                echo "FAIL PostgreSQL"; failed=1
+                fi
+
+                echo "== 4. Spark : version, jars et scripts des DAGs =="
+                if docker exec spark /opt/spark/bin/spark-submit --version 2>&1 | grep -q "version" \
+                && docker exec spark test -f /opt/spark-extra-jars/postgresql.jar \
+                && docker exec spark test -f /opt/spark-extra-jars/gcs-connector.jar \
+                && docker exec spark test -f /app/src/notebooks/ingestion/load_airlabs_schedule_files.py \
+                && docker exec spark test -f /app/src/notebooks/ingestion/collect_meteo_airlabs.py; then
+                echo "OK   Spark"
+                else
+                echo "FAIL Spark"; failed=1
+                fi
+
+                echo "== 5. dbt : connexion à la base (même appel que les DAGs, depuis Airflow) =="
+                if docker exec airflow_scheduler docker compose \
+                    -f /home/airline/repos/docker-compose.yaml run --rm dbt dbt debug; then
+                echo "OK   dbt"
+                else
+                echo "FAIL dbt"; failed=1
+                fi
+
+                echo "== 6. Airflow : erreurs d'import des DAGs (informatif) =="
+                docker exec airflow_scheduler airflow dags list-import-errors || true
+
+                if [ "$failed" -ne 0 ]; then
+                echo "Des tests ont échoué."
+                exit 1
+                fi
+                echo "Tous les tests sont passés."
+            EOF
