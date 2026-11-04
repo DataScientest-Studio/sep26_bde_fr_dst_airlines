@@ -15,6 +15,7 @@ on:
       - ".github/workflows/build-push-docker.yml"  # Ce yml
       - "src/spark/**"      # Les sources python utilisées dans le container spark
       - "src/dbt/**"        # Les DAG pour airflow
+      - "!docker/collect/**"  # Le collecteur AirLabs a son propre workflow
   pull_request:
     branches:
       - master
@@ -22,6 +23,7 @@ on:
       - "src/**"
       - "requirements.txt"
       - ".github/workflows/build-push-docker.yml"
+      - "!src/airlabs_collect/**"  # Le collecteur AirLabs a son propre workflow
   workflow_dispatch:
 
 
@@ -270,7 +272,8 @@ jobs:
             # Authentifie Docker auprès d'Artifact Registry (via le compte de service de la VM)
             gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
             
-            # Se place sur la dernière version de la branche déployée
+            # Se place sur la dernière version de la branche déployée - Ne recupere que ce qui est utilise
+            git sparse-checkout set --cone src/airflow/dags docker/postgres/init docker/airflow
             git fetch origin "$BRANCH"
             git checkout -B "$BRANCH" FETCH_HEAD
 
