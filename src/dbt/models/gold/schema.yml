@@ -52,6 +52,8 @@ models:
         tests:
           - unique
           - not_null
+      - name: dep_hour
+        description: "Scheduled departure rounded to the hour (UTC), join key with departure weather"
       - name: arr_airport_id
         tests:
           - relationships:
@@ -65,8 +67,9 @@ models:
   - name: ml_flights_features
     description: >
       Training table: one row per AirLabs flight. Only features known at prediction time
-      (airline, airports, scheduled arrival day and hour, weather at scheduled arrival hour)
-      and the delay target. Actual arrival and delay minutes are excluded (target leakage).
+      (airline, airports, scheduled arrival day and hour, weather at scheduled departure hour
+      and at scheduled arrival hour) and the delay target. Actual arrival and delay minutes
+      are excluded (target leakage).
     columns:
       - name: schedule_id
         description: "Flight key (fact_flights)"
@@ -88,9 +91,4 @@ models:
       - name: arr_temp_dew_spread
         description: "Temperature minus dew point at arrival airport (fog indicator)"
       - name: arr_weather_code
-        description: "WMO 4677 weather code at arrival airport, scheduled arrival hour"
-      - name: delay
-        description: "Target: arrival delay > 15 min (AirLabs arr_delayed, NULL = not delayed)"
-        tests:
-          - not_null
-  
+        description: "WMO 4677 weather code at arrival airport,
