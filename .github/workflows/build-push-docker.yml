@@ -62,6 +62,7 @@ jobs:
               - 'docker/dbt/**'
               - 'src/dbt/**'
               - '.github/workflows/build-push-docker.yml'
+            
       - name: Build matrix          # Defini la liste des service à regenerer
         id: build-matrix
         env:
