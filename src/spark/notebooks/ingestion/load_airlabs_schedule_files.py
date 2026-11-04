@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
+
+##############################################################
+# Script to load csv collected every 2 hours by GCP Cloud Run
+##############################################################
 from pathlib import Path
 import os, sys
 import tempfile
@@ -13,6 +17,8 @@ import common
 import json
 import debugpy
 is_local=False
+
+# Run in Docker ?
 if os.getenv("RUN_ENV") == "docker":
     print("Docker execution")
 else:
@@ -22,13 +28,23 @@ else:
 import pyspark
 import os
 
+from sqlalchemy import create_engine, text
+
 print("PySpark :", pyspark.__version__)
 print("SPARK_HOME :", os.environ.get("SPARK_HOME"))
 print("JAVA_HOME :", os.environ.get("JAVA_HOME"))
 
-# Read all CSV from Bucket
+
 
 def read_input(bucket_name, prefix, gcp_project, use_temp_file:bool=False):
+    """ Read all CSV from Bucket 
+        @param bucket_name : Name of Google Storage Bucket
+        @param prefix : Prefix/Path of collected files
+        @param gcp_project : ID of GCP project (to connect to bucket)
+        @param use_temp_file : True to use temp file before to load in Dataframe
+
+        @return DataFrame, List of files
+    """
     df=None
     print(f"Read files from {bucket_name}/{prefix}")
     client = storage.Client(project=gcp_project)
@@ -112,7 +128,11 @@ def read_input(bucket_name, prefix, gcp_project, use_temp_file:bool=False):
         .withColumn("dep_actual", F.to_timestamp("dep_actual")) \
         .withColumn("duration", F.col("duration").cast("integer")) \
         .withColumn("dep_delayed", F.col("dep_delayed").cast("integer")) \
-        .withColumn("arr_delayed", F.col("arr_delayed").cast("integer"))
+        .withColumn("arr_delayed", F.col("arr_delayed").cast("integer")) \
+        .withColumn("dep_time_utc", F.to_timestamp("dep_time_utc")) \
+        .withColumn("arr_time_utc", F.to_timestamp("arr_time_utc")) \
+        .withColumn("arr_actual_utc", F.to_timestamp("arr_actual_utc")) \
+        .withColumn("dep_actual_utc", F.to_timestamp("dep_actual_utc")) 
     # Drop duplicates
     df = df.dropDuplicates([
         "airline_icao",
@@ -165,13 +185,18 @@ def load_temp(df, host,db, user, password,port=5432):
     return staging_table
 
 
-# In[15]:
 
-
-# Insert in target table
-from sqlalchemy import create_engine, text
 
 def insert(staging_table,host, db,user,password, port=5432, table="raw.airlabs_schedules" ):
+    """ Insert temp data in target table 
+        @param staging_table: Name of Temp/Staging table
+        @param host : PG Host name
+        @param db : Database
+        @param user: PG Username
+        @param password : PG Password
+        @param port : PG DB Port (defaul 5432)
+        @param table : Target table (default raw.airlabs_schedules)
+    """
     engine = create_engine(
         f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
     )
@@ -205,7 +230,11 @@ def insert(staging_table,host, db,user,password, port=5432, table="raw.airlabs_s
                 arr_delayed,
                 dep_estimated,
                 dep_actual,
-                source_file
+                source_file, 
+                dep_time_utc,
+                arr_time_utc,
+                dep_actual_utc,
+                arr_actual_utc
             )
             SELECT DISTINCT
                 s.airline_icao,
@@ -226,7 +255,11 @@ def insert(staging_table,host, db,user,password, port=5432, table="raw.airlabs_s
                 s.arr_delayed,
                 s.dep_estimated,
                 s.dep_actual,
-                s.source_file
+                s.source_file,
+                s.dep_time_utc,
+                s.arr_time_utc,
+                s.dep_actual_utc,
+                s.arr_actual_utc
             FROM {staging_table} s
             ON CONFLICT (
                 airline_icao,
@@ -245,10 +278,6 @@ def insert(staging_table,host, db,user,password, port=5432, table="raw.airlabs_s
             conn.execute(text(
                 f"DROP TABLE IF EXISTS {staging_table}"
         ))
-
-
-# In[8]:
-
 
 
 def move(bucket_name,source_prefix, loaded_prefix, files, gcp_project):
@@ -298,6 +327,7 @@ def move(bucket_name,source_prefix, loaded_prefix, files, gcp_project):
 spark = init_spark()
 if __name__== "__main__":
     try:
+        # Read config
         try:
             config = Config(__file__)
             config.get_secrets()
