@@ -7,35 +7,35 @@
       "GRANT SELECT ON {{ this }} TO airline_rw"
     ]) }}
 
-with harmonized as (
+with landed as (
     select a.*,
-        case when source_file like 'airlabs_raw/%' then arr_time
-             else (arr_time at time zone 'UTC') at time zone 'Europe/Paris' end as arr_time_utc,
-        case when source_file like 'airlabs_raw/%' then arr_actual
-             else (arr_actual at time zone 'UTC') at time zone 'Europe/Paris' end as arr_actual_utc
+        dep_time_utc at time zone 'UTC' as sched_dep_utc,
+        dep_actual_utc at time zone 'UTC' as actual_dep_utc,
+        arr_time_utc at time zone 'UTC' as sched_arr_utc,
+        arr_actual_utc at time zone 'UTC' as actual_arr_utc
     from {{ source('raw', 'airlabs_schedules') }} a
     where status = 'landed'
 ),
 schedules as (
-    select h.*,
-        TO_CHAR(dep_time, 'HH24:MI')  AS dep_hour,
-        TO_CHAR(arr_time_utc, 'HH24:MI')  AS arr_hour,
-        EXTRACT(DOW FROM dep_time) AS dow,
+    select l.*,
+        TO_CHAR(sched_dep_utc, 'HH24:MI')  AS dep_hour,
+        TO_CHAR(sched_arr_utc, 'HH24:MI')  AS arr_hour,
+        EXTRACT(DOW FROM sched_dep_utc) AS dow,
         row_number() over (
             partition by
                 flight_number,
                 dep_icao,
                 arr_icao,
-                arr_time_utc,
-                dep_time,
-                EXTRACT(DOW FROM dep_time)
+                sched_arr_utc,
+                sched_dep_utc,
+                EXTRACT(DOW FROM sched_dep_utc)
             order by
                 case
                     when cs_flight_iata is not null then 1
                     else 2
                 end
         ) as rn
-        from harmonized h
+        from landed l
 ),
 dedup_schedules as (
     select *
@@ -77,10 +77,10 @@ final as (
         s.dep_hour AS dep_hour,
         s.arr_hour AS arr_hour,
         s.dow,
-        s.dep_time,
-        s.dep_actual,
-        s.arr_time_utc AS arr_time,
-        s.arr_actual_utc AS arr_actual,
+        s.sched_dep_utc AS dep_time,
+        s.actual_dep_utc AS dep_actual,
+        s.sched_arr_utc AS arr_time,
+        s.actual_arr_utc AS arr_actual,
         s.duration,
         s.arr_delayed as delayed
 FROM dedup_schedules s
