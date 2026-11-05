@@ -24,6 +24,21 @@ select
     w.precipitation as arr_precipitation,
     w.snowfall as arr_snowfall,
     w.weather_code as arr_weather_code,
+    wd.temperature_2m as dep_temperature_2m,
+    wd.temperature_2m - wd.dew_point_2m as dep_temp_dew_spread,
+    wd.relative_humidity_2m as dep_relative_humidity_2m,
+    wd.pressure_msl as dep_pressure_msl,
+    wd.cloud_cover as dep_cloud_cover,
+    wd.cloud_cover_low as dep_cloud_cover_low,
+    wd.cloud_cover_mid as dep_cloud_cover_mid,
+    wd.cloud_cover_high as dep_cloud_cover_high,
+    wd.wind_speed_10m as dep_wind_speed_10m,
+    wd.wind_direction_sin as dep_wind_direction_sin,
+    wd.wind_direction_cos as dep_wind_direction_cos,
+    wd.wind_gusts_10m as dep_wind_gusts_10m,
+    wd.precipitation as dep_precipitation,
+    wd.snowfall as dep_snowfall,
+    wd.weather_code as dep_weather_code,
     f.delay
 from {{ ref('fact_flights') }} f
 left join {{ ref('dim_airlines') }} al on al.airline_id = f.airline_id
@@ -32,3 +47,6 @@ left join {{ ref('dim_airports') }} aa on aa.airport_id = f.arr_airport_id
 left join {{ ref('fact_weather_hourly') }} w
        on w.airport_id = f.arr_airport_id
       and w.time = f.arr_hour
+left join {{ ref('fact_weather_hourly') }} wd
+       on wd.airport_id = f.dep_airport_id
+      and wd.time = f.dep_hour

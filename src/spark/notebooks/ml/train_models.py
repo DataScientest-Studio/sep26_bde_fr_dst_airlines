@@ -6,7 +6,7 @@ Train delay prediction models (scikit-learn) and store their scores.
 Steps:
   1. Read config and secrets (shared config.json of the ingestion folder)
   2. Read gold.ml_flights_features into a pandas DataFrame
-  3. Prepare data: drop flights without weather, train/test split by random whole days
+  3. Prepare data: drop flights without weather (arrival or departure), train/test split by random whole days
      (no day shared between train and test), preprocessing (one-hot for categories,
      numeric columns passed through)
   4. Train a RandomForest and an XGBoost, each in a Pipeline (preprocessing + model),
@@ -70,6 +70,21 @@ NUMERIC_FEATURES = [
     "arr_precipitation",
     "arr_snowfall",
     "arr_weather_code",
+    "dep_temperature_2m",
+    "dep_temp_dew_spread",
+    "dep_relative_humidity_2m",
+    "dep_pressure_msl",
+    "dep_cloud_cover",
+    "dep_cloud_cover_low",
+    "dep_cloud_cover_mid",
+    "dep_cloud_cover_high",
+    "dep_wind_speed_10m",
+    "dep_wind_direction_sin",
+    "dep_wind_direction_cos",
+    "dep_wind_gusts_10m",
+    "dep_precipitation",
+    "dep_snowfall",
+    "dep_weather_code",
 ]
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
@@ -91,13 +106,13 @@ def read_features(host, db, user, password, port, table):
 
 # Prepare data for training
 def prepare_data(df):
-    """ Drop flights without weather, split train/test by random whole days
+    """ Drop flights without weather (arrival or departure), split train/test by random whole days
         (UTC date of the scheduled arrival) and build the preprocessing step
         shared by all models.
         @return X_train, X_test, y_train, y_test, preprocessor, split_info
     """
     nb_before = len(df)
-    df = df.dropna(subset=["arr_temperature_2m"]).copy()
+    df = df.dropna(subset=["arr_temperature_2m", "dep_temperature_2m"]).copy()
     print(f"{nb_before - len(df)} flight(s) without weather dropped, {len(df)} kept")
 
     df["dow"] = df["dow"].astype(int)
