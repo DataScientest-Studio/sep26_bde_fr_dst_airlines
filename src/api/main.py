@@ -20,7 +20,7 @@ from api.schemas import (
     Flight,
     FlightPredictionInput,
     PredictionOutput,
-    StatsOut,
+    DelayStats,
     FlightSearch,
     ModelInfo
 )
@@ -202,29 +202,25 @@ def get_airlines(search: Optional[str] = Query(None),db: Session = Depends(get_d
         raise HTTPException(detail=f"Error getting Airlines : {e}")
 
 
-@app.get("/stats", response_model=StatsOut, tags=["Analytics"])
-def get_stats(
-    airline_code: Optional[str] = Query(None),
-    origin_airport: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-):
-    """Calcule les statistiques agrégées des vols depuis PostgreSQL."""
-    query = """
-        SELECT
-            COUNT(*) AS total_flights,
-            COALESCE(AVG(departure_delay), 0.0) AS avg_departure_delay,
-            COALESCE(AVG(arrival_delay), 0.0) AS avg_arrival_delay,
-            COALESCE(AVG(CASE WHEN arrival_delay >= 15 THEN 1.0 ELSE 0.0 END), 0.0) AS delayed_flights_rate,
-            COALESCE(AVG(CASE WHEN cancelled = TRUE THEN 1.0 ELSE 0.0 END), 0.0) AS cancellation_rate
-        FROM silver.flights
-        WHERE (:airline_code IS NULL OR airline_code = :airline_code)
-          AND (:origin_airport IS NULL OR origin_airport = :origin_airport)
-    """
-    row = db.execute(
-        text(query),
-        {"airline_code": airline_code, "origin_airport": origin_airport},
-    ).mappings().first()
-    return StatsOut(**row)
+@app.get("/stats/hour", response_model=List[DelayStats], tags=["Analytics"])
+def get_stats_hour(db: Session = Depends(get_db)):
+    """Delay statistics per scheduled arrival hour (Paris local time)."""
+    rows = db.execute(text("SELECT * FROM marts.mrt_delay_by_hour")).mappings().all()
+    return [DelayStats(**row) for row in rows]
+
+
+@app.get("/stats/airline", response_model=List[DelayStats], tags=["Analytics"])
+def get_stats_airline(db: Session = Depends(get_db)):
+    """Delay statistics per airline."""
+    rows = db.execute(text("SELECT * FROM marts.mrt_delay_by_airline")).mappings().all()
+    return [DelayStats(**row) for row in rows]
+
+
+@app.get("/stats/airport", response_model=List[DelayStats], tags=["Analytics"])
+def get_stats_airport(db: Session = Depends(get_db)):
+    """Delay statistics per departure airport."""
+    rows = db.execute(text("SELECT * FROM marts.mrt_delay_by_airport")).mappings().all()
+    return [DelayStats(**row) for row in rows]
 
 @app.get("/models", response_model=List[ModelInfo], tags=["ML Inference"])
 def get_models(db: Session = Depends(get_db)):

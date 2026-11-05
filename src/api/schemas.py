@@ -61,15 +61,6 @@ class FlightSearch(BaseModel):
     limit:int = 100,
     offset:int=0
 
-class StatsOut(BaseModel):
-    """ Store Statistics """
-    total_flights: int
-    avg_departure_delay: float
-    avg_arrival_delay: float
-    delayed_flights_rate: float
-    cancellation_rate: float
-
-
 class FlightPredictionInput(BaseModel):
     flight:Flight
     
@@ -116,3 +107,13 @@ class ModelInfo(BaseModel):
     precision: Optional[float] = Field(default=None, description="Precision on delay class")
     recall: Optional[float] = Field(default=None, description="Recall on delay class")
     online: bool = Field(description="True for the model used by the API")
+
+class DelayStats(BaseModel):
+    """ Store delay statistics of one group (arrival hour, airline or departure airport) """
+    arr_hour_local: Optional[int] = Field(default=None, description="Scheduled arrival hour, Paris local time")
+    airline_icao: Optional[str] = Field(default=None, description="Airline ICAO code")
+    adep: Optional[str] = Field(default=None, description="Departure airport ICAO code")
+    nb_flights: int = Field(description="Number of flights")
+    nb_delayed: int = Field(description="Number of flights delayed (> 15 min)")
+    delay_rate: float = Field(description="Share of delayed flights (0 to 1)")
+    avg_delay_min: Optional[float] = Field(default=None, description="Average delay of delayed flights (minutes)")

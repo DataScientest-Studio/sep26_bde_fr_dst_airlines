@@ -73,16 +73,18 @@ class APIClient:
         """ Get list of Airlines """
         return self._get("/airlines")
 
-    def get_stats(
-        self,
-        airline_code: Optional[str] = None,
-        origin_airport: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        return self._get(
-            "/stats",
-            params={"airline_code": airline_code, "origin_airport": origin_airport},
-        )
+    def get_stats_hour(self) -> List[Dict[str, Any]]:
+        """ Get delay statistics per arrival hour """
+        return self._get("/stats/hour", params={})
 
+    def get_stats_airline(self) -> List[Dict[str, Any]]:
+        """ Get delay statistics per airline """
+        return self._get("/stats/airline", params={})
+
+    def get_stats_airport(self) -> List[Dict[str, Any]]:
+        """ Get delay statistics per departure airport """
+        return self._get("/stats/airport", params={})
+    
     def get_models(self) -> List[Dict[str, Any]]:
         """ Get List of Models """
         return self._get("/models", params={})
