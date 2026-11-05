@@ -1,0 +1,85 @@
+
+version: 2
+
+models:
+  - name: mrt_ml_flights_features
+    description: >
+      Training table: one row per AirLabs flight. Only features known at prediction time
+      (airline, airports, scheduled arrival day and hour, weather at scheduled departure hour
+      and at scheduled arrival hour) and the delay target. Actual arrival and delay minutes
+      are excluded (target leakage).
+    columns:
+      - name: schedule_id
+        description: "Flight key (fact_flights)"
+        tests:
+          - unique
+          - not_null
+      - name: sched_arr_utc
+        description: "Scheduled arrival (UTC). Used for a time-based train/test split, not a feature"
+      - name: airline_icao
+        description: "Airline ICAO code"
+      - name: adep
+        description: "Departure airport ICAO code"
+      - name: ades
+        description: "Arrival airport ICAO code (LFPG, LFPO, LFOB)"
+      - name: dow
+        description: "Day of week of scheduled arrival, Paris local time (1 = Monday, 7 = Sunday)"
+      - name: arr_hour_local
+        description: "Hour of scheduled arrival, Paris local time (0-23)"
+      - name: arr_temp_dew_spread
+        description: "Temperature minus dew point at arrival airport (fog indicator)"
+      - name: arr_weather_code
+        description: "WMO 4677 weather code at arrival airport, scheduled arrival hour"
+      - name: dep_temp_dew_spread
+        description: "Temperature minus dew point at departure airport (fog indicator)"
+      - name: dep_weather_code
+        description: "WMO 4677 weather code at departure airport, scheduled departure hour"
+      - name: delay
+        description: "Target: arrival delay > 15 min (AirLabs arr_delayed, NULL = not delayed)"
+        tests:
+          - not_null
+  - name: mrt_delay_by_airline
+    description: "Delay statistics per airline (fact_flights)"
+    columns:
+      - name: airline_icao
+        description: "Airline ICAO code"
+        tests:
+          - unique
+      - name: nb_flights
+        description: "Number of flights"
+      - name: nb_delayed
+        description: "Number of flights delayed (> 15 min)"
+      - name: delay_rate
+        description: "Share of delayed flights (0 to 1)"
+      - name: avg_delay_min
+        description: "Average arrival delay of delayed flights (minutes)"
+  - name: mrt_delay_by_hour
+    description: "Delay statistics per scheduled arrival hour, Paris local time (fact_flights)"
+    columns:
+      - name: arr_hour_local
+        description: "Hour of scheduled arrival, Paris local time (0-23)"
+        tests:
+          - unique
+      - name: nb_flights
+        description: "Number of flights"
+      - name: nb_delayed
+        description: "Number of flights delayed (> 15 min)"
+      - name: delay_rate
+        description: "Share of delayed flights (0 to 1)"
+      - name: avg_delay_min
+        description: "Average arrival delay of delayed flights (minutes)"
+  - name: mrt_delay_by_airport
+    description: "Delay statistics per departure airport (fact_flights)"
+    columns:
+      - name: adep
+        description: "Departure airport ICAO code"
+        tests:
+          - unique
+      - name: nb_flights
+        description: "Number of flights"
+      - name: nb_delayed
+        description: "Number of flights delayed (> 15 min)"
+      - name: delay_rate
+        description: "Share of delayed flights (0 to 1)"
+      - name: avg_delay_min
+        description: "Average arrival delay of delayed flights (minutes)"
