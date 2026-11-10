@@ -42,7 +42,7 @@ def _render_airports() -> None:
 
 
 def _render_flights() -> None:
-    """ Affiche Reference Flights """
+    """ Affiche Reference Flights (Non utilisé) """
     st.subheader("✈️ Table de référence : Flights (`/flight`)")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -69,10 +69,12 @@ def _render_flights() -> None:
 
 
 def render(table_choice: str) -> None:
+    """ Affiche le composant 
+        @param table_choice : Table à afficher (Compagnies ou Aéroports)
+    """
     st.title("📚 Tables de Référence")
-    if table_choice == "Airlines":
+    if table_choice == "Compagnies":
         _render_airlines()
-    elif table_choice == "Airports":
-        _render_airports()
     else:
-        _render_flights()
+        _render_airports()
+    
