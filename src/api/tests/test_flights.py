@@ -1,7 +1,9 @@
+"""Tests de l'endpoint POST /flights (recherche de vols)."""
 import pytest
 
 from api.schemas import FlightSearch
 
+# Recherche valide de référence ; les tests en modifient un champ à la fois
 BASE = {
     "airline_name": "Air France",
     "origin_airport": "CDG",
@@ -11,33 +13,39 @@ BASE = {
 
 
 def test_search_defaults_are_not_tuples():
+    """Régression : des virgules finales faisaient de limit/flight_date des tuples."""
     s = FlightSearch()
     assert s.limit == 100 and s.offset == 0 and s.flight_date is None
 
 
 @pytest.mark.parametrize("missing", ["origin_airport", "destination_airport", "flight_date", "airline_name"])
 def test_missing_required_param_returns_422(client, missing):
+    """Chaque paramètre obligatoire manquant renvoie 422 (et non un 500)."""
     body = {k: v for k, v in BASE.items() if k != missing}
     assert client.post("/flights", json=body).status_code == 422
 
 
 def test_bad_date_format_returns_422(client):
+    """La date doit être au format YYYY-MM-DD."""
     r = client.post("/flights", json={**BASE, "flight_date": "08/11/2026"})
     assert r.status_code == 422
 
 
 def test_limit_is_bounded(client):
+    """limit doit rester entre 1 et 1000."""
     assert client.post("/flights", json={**BASE, "limit": 0}).status_code == 422
     assert client.post("/flights", json={**BASE, "limit": 100000}).status_code == 422
 
 
 def test_airline_name_pattern_has_no_quotes(client, fake_db):
+    """Régression : le pattern ILIKE contenait des apostrophes littérales."""
     assert client.post("/flights", json=BASE).status_code == 200
     _, params = fake_db.calls[0]
     assert params["airline_name"] == "%Air France%"
 
 
 def test_dow_sunday_is_zero_and_monday_is_one(client, fake_db):
+    """Jour de la semaine au format Postgres (EXTRACT(DOW)) : dimanche = 0, lundi = 1."""
     client.post("/flights", json=BASE)  # 2026-11-08 = dimanche
     client.post("/flights", json={**BASE, "flight_date": "2026-11-09"})  # lundi
     assert fake_db.calls[0][1]["dow"] == 0
@@ -45,18 +53,21 @@ def test_dow_sunday_is_zero_and_monday_is_one(client, fake_db):
 
 
 def test_optional_hours_can_be_omitted(client, fake_db):
+    """start_hour/end_hour sont facultatifs et transmis à None."""
     assert client.post("/flights", json=BASE).status_code == 200
     params = fake_db.calls[0][1]
     assert params["start_hour"] is None and params["end_hour"] is None
 
 
 def test_hours_are_formatted(client, fake_db):
+    """Les heures sont converties au format HH:00."""
     client.post("/flights", json={**BASE, "start_hour": 6, "end_hour": 12})
     params = fake_db.calls[0][1]
     assert (params["start_hour"], params["end_hour"]) == ("06:00", "12:00")
 
 
 def test_airline_codes_alone_is_enough(client, fake_db):
+    """Des codes ICAO de compagnies suffisent, sans airline_name ; le filtre IN est ajouté à la requête."""
     body = {k: v for k, v in BASE.items() if k != "airline_name"}
     r = client.post("/flights", json={**body, "airline_codes": ["AFR", "EZY"]})
     assert r.status_code == 200
@@ -64,6 +75,7 @@ def test_airline_codes_alone_is_enough(client, fake_db):
 
 
 def test_db_error_returns_500_without_leaking_details(client, fake_db):
+    """Une erreur SQL donne un 500 générique : le message interne ne doit pas fuiter au client."""
     fake_db.error = RuntimeError("password=secret host=internal")
     r = client.post("/flights", json=BASE)
     assert r.status_code == 500
