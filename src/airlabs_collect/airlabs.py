@@ -171,7 +171,7 @@ def save_csv(rows, filename, local_folder):
     """
     if not rows:
         print(f"No data for {filename}")
-        return None
+        return None, False
 
     if local_folder:
         os.makedirs(local_folder, exist_ok=True)
