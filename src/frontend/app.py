@@ -49,7 +49,7 @@ def main() -> None:
         elif main_section == "Références":
             ref_sub = st.selectbox(
                 "Table à afficher",
-                options=["Airlines", "Airports", "Flights"],
+                options=["Compagnies", "Aéroports"],
             )
         
 
@@ -63,7 +63,7 @@ def main() -> None:
     elif main_section == "Statistiques":
         statistics.render(stat_sub or "Modèle (Graphiques)")
     elif main_section == "Références":
-        references.render(ref_sub or "Airlines")
+        references.render(ref_sub or "Compagnies")
     elif main_section == "Modèles":
         models.render()
 

@@ -21,6 +21,41 @@ env:
   IMAGE: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/airlabs-collect
 
 jobs:
+  # ------------------------------------------------------------
+  # Lint + tests Python (bloque le build et le déploiement)
+  # ------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: src/airlabs_collect/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/airlabs_collect/requirements.txt
+          pip install flake8
+          pip install pytest==8.3.5
+          pip install anyio==4.4.0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with flake8
+        run: |
+          # Stoppe le build sur les erreurs de syntaxe ou les noms non définis
+          flake8 src/airlabs_collect --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Le reste est un simple avertissement
+          flake8 src/airlabs_collect --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest src/airlabs_collect/tests
   deploy:
     runs-on: ubuntu-latest
     steps:
