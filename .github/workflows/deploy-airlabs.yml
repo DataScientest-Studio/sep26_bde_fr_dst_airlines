@@ -57,6 +57,7 @@ jobs:
         run: |
           pytest src/airlabs_collect/tests
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

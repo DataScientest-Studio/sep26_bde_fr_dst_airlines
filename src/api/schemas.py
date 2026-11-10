@@ -19,8 +19,8 @@ class Airport(BaseModel):
 
 class Airline(BaseModel):
     """ Store Airline information """
-    iata_code: str =Field( default=None, description="Airline IATA Code"),
-    airline_name: str=Field( default=None, description="Airline Name"),
+    iata_code: str =Field( default=None, description="Airline IATA Code")
+    airline_name: str=Field( default=None, description="Airline Name")
     icao_code:str=Field( default=None, description="ICAO Code")
 
 
@@ -31,17 +31,17 @@ class Flight(BaseModel):
     airline_icao:Optional[str] =Field( default=None, description="Airline ICAO Code")
     airline_iata:Optional[str] =Field( default=None, description="Airline IATA Code")
     airline_name:Optional[str] =Field( default=None, description="Airline Name")
-    flight_number:Optional[str] =Field( default=None, description="Flight Number"), 
+    flight_number:Optional[str] =Field( default=None, description="Flight Number")
     dep_icao:Optional[str] =Field( default=None, description="Departure Airport IATA Code")
     arr_icao:Optional[str] =Field( default=None, description="Arrival Airport IATA Code")
     arr_time:Optional[str] =Field( default=None, description="Arrival Time")
     dep_time:Optional[str] =Field( default=None, description="Departure Time")
     dep_iata:Optional[str] =Field( default=None, description="Departure Airport IATA Code")
     arr_iata:Optional[str] =Field( default=None, description="Arrival Airport IATA Code")
-    dow:Optional[int] =Field(  description="Day of week")
-    month:Optional[int]=Field(  description="Month of flight")
-    day:Optional[int]=Field(  description="Day of flight")
-    year:Optional[int]=Field(  description="Year of flight")
+    dow:Optional[int] =Field(default=None, description="Day of week")
+    month:Optional[int]=Field(default=None, description="Month of flight")
+    day:Optional[int]=Field(default=None, description="Day of flight")
+    year:Optional[int]=Field(default=None, description="Year of flight")
     flight_date:Optional[str] =Field( default=None, description="Departure Date of flight")
     dep_country:Optional[str] =Field( default=None, description="Country ISOCode of Departure airport")
     dep_lat:Optional[str] =Field( default=None, description="Latitude of departure Airport")
@@ -57,9 +57,9 @@ class FlightSearch(BaseModel):
     destination_airport: str | None = None
     start_hour: int | None = None
     end_hour: int | None = None
-    flight_date: str | None = None,
-    limit:int = 100,
-    offset:int=0
+    flight_date: str | None = None
+    limit: int = Field(default=100, ge=1, le=1000)
+    offset: int = Field(default=0, ge=0)
 
 class FlightPredictionInput(BaseModel):
     flight:Flight

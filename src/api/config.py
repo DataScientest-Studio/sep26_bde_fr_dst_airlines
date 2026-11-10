@@ -7,8 +7,11 @@ class Settings(BaseSettings):
     VERSION: str = "0.0.1"
 
     # Sécurité
-    API_KEY: str = os.getenv("API_KEY", "dev-secret-api-key")
+    API_KEY: str = os.getenv("API_KEY", "")
     API_KEY_NAME: str = "X-API-Key"
+
+    # CORS : origines séparées par des virgules (vide = aucune)
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
 
     # Base de données PostgreSQL
     POSTGRES_USER: str = os.getenv("PG_USER", "batch")
@@ -19,6 +22,10 @@ class Settings(BaseSettings):
 
     # Modèle Scikit-Learn
     MODEL_PATH: str = os.getenv("MODEL_PATH", "/app/workspace/models/model.joblib")
+
+    @property
+    def cors_origins(self) -> list:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     @property
     def database_url(self) -> str:

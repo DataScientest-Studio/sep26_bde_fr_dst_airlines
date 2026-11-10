@@ -554,7 +554,7 @@ Relevés pendant la rédaction de cette documentation ; à traiter ou à garder 
 
 - `ALLOW_DEV_BYPASS_GOOGLE_AUTH` vaut `true` par défaut : le bouton « Mode Démo Dev » permet d'entrer sans compte Google si la variable n'est pas définie à `false` en production.
 - `redirect_uri` Streamlit codé en dur sur `http://localhost:8501`.
-- PostgreSQL (5432), Airflow, JupyterHub, API et Streamlit sont publiés sur toutes les interfaces : la protection repose sur les règles de pare-feu GCP. CORS `*` sur l'API.
+- Airflow (8080), JupyterHub (8888) et Streamlit (8501) sont publiés sur toutes les interfaces : la protection repose sur les règles de pare-feu GCP. PostgreSQL (5432), l'API (8000) et l'UI Spark (4040) sont liés à 127.0.0.1 (accès distant via tunnel SSH). CORS de l'API fermé par défaut (variable `CORS_ORIGINS`).
 - `.env` écrit en `chmod 666` sur la VM.
 
 ### Code mort / à nettoyer
