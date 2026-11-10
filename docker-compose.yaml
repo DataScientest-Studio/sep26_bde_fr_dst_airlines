@@ -40,7 +40,7 @@ services:
       
 
   # ============================================================
-  # Jupyter + PySpark
+  # Jupyter + PySpark  (Utilisé pour les tests)
   # ============================================================
   jupyter:
     image: europe-west1-docker.pkg.dev/project-0845983d-30e1-47a7-a62/airline/jupyter:latest
