@@ -95,3 +95,9 @@ src/dbt/dbt_packages/
 
 # Streamlit
 secrets.toml
+# Terraform
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfplan
