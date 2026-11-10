@@ -43,52 +43,52 @@ import {
 
 # --- Secret Manager ---
 import {
-  to = google_secret_manager_secret.airlabs_api_keys
+  to = module.secrets.google_secret_manager_secret.airlabs_api_keys
   id = "projects/${var.project_id}/secrets/airlabs-api-keys"
 }
 
 import {
-  to = google_secret_manager_secret.airlinebucket_credentials
+  to = module.secrets.google_secret_manager_secret.airlinebucket_credentials
   id = "projects/${var.project_id}/secrets/AIRLINEBUCKET_CREDENTIALS"
 }
 
 import {
-  to = google_secret_manager_secret.airlinedb_password
+  to = module.secrets.google_secret_manager_secret.airlinedb_password
   id = "projects/${var.project_id}/secrets/AIRLINEDB_PASSWORD"
 }
 
 import {
-  to = google_secret_manager_secret_iam_member.airlabs_secret_access
+  to = module.secrets.google_secret_manager_secret_iam_member.airlabs_secret_access
   id = "projects/${var.project_id}/secrets/airlabs-api-keys roles/secretmanager.secretAccessor ${local.sa_member}"
 }
 
 # --- Pare-feu (id = projects/<p>/global/firewalls/<nom>) ---
 import {
-  to = google_compute_firewall.default_allow_http
+  to = module.networking.google_compute_firewall.default_allow_http
   id = "projects/${var.project_id}/global/firewalls/default-allow-http"
 }
 
 import {
-  to = google_compute_firewall.default_allow_https
+  to = module.networking.google_compute_firewall.default_allow_https
   id = "projects/${var.project_id}/global/firewalls/default-allow-https"
 }
 
 import {
-  to = google_compute_firewall.default_allow_icmp
+  to = module.networking.google_compute_firewall.default_allow_icmp
   id = "projects/${var.project_id}/global/firewalls/default-allow-icmp"
 }
 
 import {
-  to = google_compute_firewall.default_allow_internal
+  to = module.networking.google_compute_firewall.default_allow_internal
   id = "projects/${var.project_id}/global/firewalls/default-allow-internal"
 }
 
 import {
-  to = google_compute_firewall.default_allow_rdp
+  to = module.networking.google_compute_firewall.default_allow_rdp
   id = "projects/${var.project_id}/global/firewalls/default-allow-rdp"
 }
 
 import {
-  to = google_compute_firewall.default_allow_ssh
+  to = module.networking.google_compute_firewall.default_allow_ssh
   id = "projects/${var.project_id}/global/firewalls/default-allow-ssh"
 }

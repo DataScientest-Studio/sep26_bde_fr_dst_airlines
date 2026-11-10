@@ -1,3 +1,13 @@
+module "networking" {
+  source = "./modules/networking"
+}
+
+module "secrets" {
+  source = "./modules/secrets"
+
+  service_account_email = var.service_account_email
+}
+
 module "vm" {
   source = "./modules/vm"
 

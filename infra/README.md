@@ -5,11 +5,14 @@ Les blocs `import {}` de [imports.tf](imports.tf) rattachent les ressources déj
 
 ```
 infra/
-├── main.tf, providers.tf, variables.tf, terraform.tfvars   # racine
-├── secret_manager.tf   # secrets + accès (les VALEURS ne sont pas gérées ici)
-├── firewall.tf         # règles du réseau "default"
+├── main.tf, providers.tf, variables.tf, terraform.tfvars   # racine : appelle les modules
 ├── imports.tf          # rattachement des ressources existantes (supprimable après un apply)
-└── modules/{vm,cloud_run,scheduler}/
+└── modules/
+    ├── vm/             # VM Compute Engine (équivalent EC2) + son disque (équivalent EBS)
+    ├── networking/     # règles de pare-feu du réseau "default"
+    ├── cloud_run/      # service de collecte AirLabs
+    ├── scheduler/      # jobs Cloud Scheduler (collecte + start/stop de la VM)
+    └── secrets/        # Secret Manager (les VALEURS ne sont pas gérées ici)
 ```
 
 ## Commandes utiles (et pièges)
@@ -58,5 +61,5 @@ Ce qui est spécifique à ce projet :
 
 ## Points de sécurité à traiter
 
-- Ports **22 (SSH)** et **3389 (RDP)** ouverts à `0.0.0.0/0` dans [firewall.tf](firewall.tf). RDP est inutile sur Debian.
+- Ports **22 (SSH)** et **3389 (RDP)** ouverts à `0.0.0.0/0` dans [firewall.tf](modules/networking/firewall.tf). RDP est inutile sur Debian.
 - Ne jamais donner `run.invoker` à `allUsers` sur le service Cloud Run (quota AirLabs payant).

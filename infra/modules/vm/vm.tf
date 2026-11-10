@@ -49,7 +49,7 @@ resource "google_compute_instance" "liora_airline_de_sep26" {
     enable-osconfig = "TRUE"
   }
 
-  # Ces tags activent les règles de pare-feu default-allow-http (80) et default-allow-https (443), voir firewall.tf.
+  # Ces tags activent les règles de pare-feu default-allow-http (80) et default-allow-https (443), voir modules/networking/firewall.tf.
   # Sans tag, la VM n'est joignable que par SSH/ICMP/réseau interne.
   tags = [
     "http-server",
