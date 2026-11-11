@@ -8,7 +8,7 @@ from api.config import settings
 from api.schemas import FlightPredictionInput, PredictionOutput
 from sqlalchemy import create_engine
 from .database import get_db
-from .flight_predictor import get_weather, build_features
+from .flight_predictor import get_weather, get_dep_weather, build_features
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +18,7 @@ class MLModelManager:
         self.db = db
 
     def load_model(self) -> None:
-        """Charge le modèle Scikit-Learn au démarrage de l'API."""
+        """Load the Scikit-Learn model when the API starts."""
         try:
             # Get model to use from DB
             model_path = settings.MODEL_PATH
@@ -43,11 +43,12 @@ class MLModelManager:
 
             # Call Meteo
             weather = get_weather(item["arr_lat"], item["arr_lng"], item["flight_date"], item["arr_time"])
+            dep_weather = get_dep_weather(item["dep_lat"], item["dep_lng"], item["flight_date"], item["dep_time"])
 
             # Prepare model params
-            predicts.append(build_features(item, weather))
+            predicts.append(build_features(item, weather, dep_weather))
 
-        # create DF    
+        # create DF
         df = pd.DataFrame(predicts)
 
         if self.model is None:
