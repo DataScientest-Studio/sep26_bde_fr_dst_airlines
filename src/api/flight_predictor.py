@@ -44,10 +44,33 @@ def get_weather(lat, lng, flight_date, arr_time):
     return {var: hourly[var][i] for var in WEATHER_VARIABLES}
 
 
-def build_features(flight, weather):
-    """ One row with the columns of gold.ml_flights_features """
+def get_dep_weather(lat, lng, flight_date, dep_time):
+    """ Open-Meteo forecast at the departure airport, for the departure hour.
+        dep_time is the local time of the departure airport: with timezone=auto,
+        Open-Meteo returns the hours in the local time of the airport, so no conversion is needed.
+    """
+    date = str(flight_date)[:10]
+    params = {
+        "latitude": lat,
+        "longitude": lng,
+        "hourly": ",".join(WEATHER_VARIABLES),
+        "start_date": date,
+        "end_date": date,
+        "timezone": "auto",
+    }
+    response = requests.get(FORECAST_URL, params=params, timeout=30)
+    response.raise_for_status()
+    hourly = response.json()["hourly"]
+
+    i = hourly["time"].index(f"{date}T{dep_time[:2]}:00")
+    return {var: hourly[var][i] for var in WEATHER_VARIABLES}
+
+
+def build_features(flight, weather, dep_weather):
+    """ One row with the columns of marts.mrt_ml_flights_features """
     arrival = datetime.strptime(f"{str(flight['flight_date'])[:10]} {flight['arr_time']}", "%Y-%m-%d %H:%M")
     direction = math.radians(weather["wind_direction_10m"])
+    dep_direction = math.radians(dep_weather["wind_direction_10m"])
     return {
         "airline_icao": flight["airline_icao"],
         "adep": flight["dep_icao"],
@@ -69,4 +92,19 @@ def build_features(flight, weather):
         "arr_precipitation": weather["precipitation"],
         "arr_snowfall": weather["snowfall"],
         "arr_weather_code": weather["weather_code"],
+        "dep_temperature_2m": dep_weather["temperature_2m"],
+        "dep_temp_dew_spread": dep_weather["temperature_2m"] - dep_weather["dew_point_2m"],
+        "dep_relative_humidity_2m": dep_weather["relative_humidity_2m"],
+        "dep_pressure_msl": dep_weather["pressure_msl"],
+        "dep_cloud_cover": dep_weather["cloud_cover"],
+        "dep_cloud_cover_low": dep_weather["cloud_cover_low"],
+        "dep_cloud_cover_mid": dep_weather["cloud_cover_mid"],
+        "dep_cloud_cover_high": dep_weather["cloud_cover_high"],
+        "dep_wind_speed_10m": dep_weather["wind_speed_10m"],
+        "dep_wind_direction_sin": math.sin(dep_direction),
+        "dep_wind_direction_cos": math.cos(dep_direction),
+        "dep_wind_gusts_10m": dep_weather["wind_gusts_10m"],
+        "dep_precipitation": dep_weather["precipitation"],
+        "dep_snowfall": dep_weather["snowfall"],
+        "dep_weather_code": dep_weather["weather_code"],
     }
