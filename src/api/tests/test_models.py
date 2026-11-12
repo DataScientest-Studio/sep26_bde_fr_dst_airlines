@@ -12,7 +12,8 @@ from api.ml_model import ml_manager
 FLIGHT = {
     "flight": {
         "airline_icao": "AFR", "dep_icao": "LFPG", "arr_icao": "LFMN",
-        "flight_date": "2026-11-10", "arr_time": "10:30",
+        "flight_date": "2026-11-10", "dep_time": "09:00", "arr_time": "10:30",
+        "dep_lat": "49.01", "dep_lng": "2.55",
         "arr_lat": "43.65", "arr_lng": "7.21",
     }
 }
@@ -24,6 +25,9 @@ WEATHER = {
     "wind_speed_10m": 12, "wind_direction_10m": 90, "wind_gusts_10m": 20,
     "precipitation": 0, "snowfall": 0, "weather_code": 1,
 }
+
+# Météo factice au départ : valeurs différentes pour vérifier que arr_* et dep_* ne sont pas mélangés
+DEP_WEATHER = {**WEATHER, "temperature_2m": 4, "dew_point_2m": 1}
 
 
 class DummyModel:
@@ -39,8 +43,9 @@ class DummyModel:
 
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
-    """Remplace l'appel Open-Meteo par des données fixes (appliqué à tous les tests)."""
+    """Remplace les appels Open-Meteo (arrivée et départ) par des données fixes (appliqué à tous les tests)."""
     monkeypatch.setattr("api.ml_model.get_weather", lambda *a, **k: WEATHER)
+    monkeypatch.setattr("api.ml_model.get_dep_weather", lambda *a, **k: DEP_WEATHER)
 
 
 def test_predict_without_model_is_503(client, monkeypatch):
@@ -75,14 +80,16 @@ def test_predict_empty_batch(client, monkeypatch):
 
 
 def test_build_features_columns():
-    """build_features produit les colonnes attendues par le modèle (gold.ml_flights_features)."""
+    """build_features produit les colonnes attendues par le modèle (marts.mrt_ml_flights_features)."""
     from api.flight_predictor import build_features
 
-    row = build_features({**FLIGHT["flight"]}, WEATHER)
+    row = build_features({**FLIGHT["flight"]}, WEATHER, DEP_WEATHER)
     assert row["adep"] == "LFPG" and row["ades"] == "LFMN"
     assert row["arr_hour_local"] == 10
     assert row["dow"] == 2  # 2026-11-10 est un mardi (isoweekday : lundi = 1)
-    assert row["arr_temp_dew_spread"] == 5  # température (10) - point de rosée (5)
+    assert row["arr_temp_dew_spread"] == 5  # température arrivée (10) - point de rosée (5)
+    assert row["dep_temperature_2m"] == 4
+    assert row["dep_temp_dew_spread"] == 3  # température départ (4) - point de rosée (1)
 
 
 @pytest.mark.parametrize("name", ["a b", "x;drop", "..%2Fetc"])
