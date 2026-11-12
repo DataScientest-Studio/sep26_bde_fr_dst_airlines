@@ -171,7 +171,7 @@ def save_csv(rows, filename, local_folder):
     """
     if not rows:
         print(f"No data for {filename}")
-        return None
+        return None, False
 
     if local_folder:
         os.makedirs(local_folder, exist_ok=True)
@@ -219,9 +219,8 @@ def run(api_keys,airports,bucket_path=None, local_dir=None, google_cred=None):
     key_to_use = get_api_key(api_keys)
     
     if key_to_use is None:
-        print("All Keys expired or reach limit")
-    else:
-        print(f"Use Key {key_to_use[0]} : {key_to_use[2]} restant")
+        raise RuntimeError("All Keys expired or reach limit")
+    print(f"Use Key {key_to_use[0]} : {key_to_use[2]} restant")
 
     airports = read_airports(key_to_use[1], airports)
     if bucket_path:
@@ -266,7 +265,7 @@ def main():
     parser.add_argument("--bucket-path",dest="bucket_path", required=False,  help="bucket/path for Google Cloud Storage")
     args = parser.parse_args()
 
-    run(args.api_keys, args.airports, args.bucket_path, args.dir, args.google_creds)
+    run(args.api_keys, args.airports, args.bucket_path, args.dir, args.google_cred)
 
 if __name__ == "__main__":
     main()

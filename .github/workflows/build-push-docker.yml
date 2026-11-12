@@ -69,6 +69,32 @@ jobs:
       - name: Test with pytest
         run: |
           pytest src/spark/tests
+
+  # ------------------------------------------------------------
+  # Tests de l'API FastAPI (Python 3.12 : pandas 3 exige >= 3.11)
+  # ------------------------------------------------------------
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: src/api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/api/requirements.txt
+          pip install pytest==8.3.5
+
+      - name: Test with pytest
+        working-directory: src
+        run: pytest api/tests
   # ------------------------------------------------------------
   # Détecte les services dont les sources ont changé
   # ------------------------------------------------------------
@@ -141,7 +167,7 @@ jobs:
   # Build + push uniquement des services modifiés
   # ------------------------------------------------------------
   build-push:
-    needs: [test, changes]    # Ne s'execute que si les tests sont passé et qu'on a evalué ce qui a changé
+    needs: [test, test-api, changes]  # Ne s'execute que si les tests sont passé et qu'on a evalué ce qui a changé
     if:  ${{ github.event_name != 'pull_request' && needs.changes.outputs.any == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -189,7 +215,7 @@ jobs:
   # Déploiement sur la VM (après le build, ou sans build si rien n'a changé) - Si les test sont passés
   # ------------------------------------------------------------
   deploy:
-    needs: [test, changes, build-push]
+    needs: [test, test-api, changes, build-push]
     if: >-
       ${{ !cancelled()
           && github.event_name != 'pull_request'
