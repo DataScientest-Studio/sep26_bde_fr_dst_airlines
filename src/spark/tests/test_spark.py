@@ -1,9 +1,13 @@
+##################################################
+# Test l'objet spark
+##################################################
 from unittest.mock import MagicMock, patch
 
 from spark.notebooks.common.spark import init_spark
 
-@patch("spark.notebooks.common.spark.SparkSession")
+@patch("spark.notebooks.common.spark.SparkSession")         # Permet d'appeler le "mock" et pas le vrai sparkSession
 def test_init_spark_sets_env(mock_spark_session):
+    """ Test l'initialisation des variables d'environnement """
     mock_builder = MagicMock()
     mock_builder.appName.return_value = mock_builder
     mock_builder.master.return_value = mock_builder
@@ -22,7 +26,7 @@ def test_init_spark_sets_env(mock_spark_session):
     assert "PYSPARK_PYTHON" in os.environ
     assert "PYSPARK_DRIVER_PYTHON" in os.environ
 
-@patch("spark.notebooks.common.spark.SparkSession")
+@patch("spark.notebooks.common.spark.SparkSession")         # Permet d'appeler le "mock" et pas le vrai sparkSession
 def test_init_spark_create_session(mock_spark_session):
     mock_builder = MagicMock()
 
@@ -48,7 +52,7 @@ def test_init_spark_create_session(mock_spark_session):
     mock_builder.master.assert_called_once_with("local[*]")
     mock_builder.getOrCreate.assert_called_once()
 
-@patch("spark.notebooks.common.spark.SparkSession")
+@patch("spark.notebooks.common.spark.SparkSession")         # Permet d'appeler le "mock" et pas le vrai sparkSession
 def test_init_spark_hadoop_config(mock_spark_session):
     mock_builder = MagicMock()
 
@@ -66,8 +70,10 @@ def test_init_spark_hadoop_config(mock_spark_session):
 
     mock_spark_session.builder = mock_builder
 
+    # Appel init_spark en utilisant mock_spark_session
     init_spark()
 
+    # Verifie les differents parametres
     hconf.set.assert_any_call(
         "fs.gs.block.size",
         "67108864"

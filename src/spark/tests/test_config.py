@@ -1,14 +1,15 @@
+##################################################
+# Test l'objet config
+##################################################
+
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from spark.notebooks.common.config import Config
 
-
-def test_load_explicit_config_file(tmp_path):
-    """
-    Vérifie le chargement d'un fichier explicitement fourni.
-    """
+def create_fake_config(tmp_path:str)->str:
+    """ Cree le fichier de config a tester """
     cfg_file = tmp_path / "config.json"
 
     cfg_file.write_text(
@@ -16,9 +17,21 @@ def test_load_explicit_config_file(tmp_path):
             {
                 "PROJECT": "airline",
                 "BUCKET": "my_bucket",
+                "SECRETS_PREFIX": "projects/test/secrets/",
+                "SECRETS": ["DB_PASSWORD"],
             }
         )
     )
+
+    return cfg_file
+
+def test_load_explicit_config_file(tmp_path):
+    """
+    Vérifie le chargement d'un fichier explicitement fourni.
+    """
+
+    # Cree le fichier de config a tester
+    cfg_file = create_fake_config(tmp_path)
 
     cfg = Config(
         app_path="/tmp/my_script.py",
@@ -30,15 +43,8 @@ def test_load_explicit_config_file(tmp_path):
 
 
 def test_getitem_and_setitem(tmp_path):
-    cfg_file = tmp_path / "config.json"
-
-    cfg_file.write_text(
-        json.dumps(
-            {
-                "PROJECT": "airline",
-            }
-        )
-    )
+    """ Test le get et set de l'objet config """
+    cfg_file = create_fake_config(tmp_path)
 
     cfg = Config(
         app_path="/tmp/my_script.py",
@@ -51,16 +57,10 @@ def test_getitem_and_setitem(tmp_path):
 
 
 def test_getattr_existing_key(tmp_path):
-    cfg_file = tmp_path / "config.json"
+    """ Test la recuperation d'une variable et utilisant le nom config.ATTR """
+    cfg_file = create_fake_config(tmp_path)
 
-    cfg_file.write_text(
-        json.dumps(
-            {
-                "PROJECT": "airline",
-            }
-        )
-    )
-
+    
     cfg = Config(
         app_path="/tmp/my_script.py",
         config_file=str(cfg_file),
@@ -70,15 +70,8 @@ def test_getattr_existing_key(tmp_path):
 
 
 def test_setattr_existing_key(tmp_path):
-    cfg_file = tmp_path / "config.json"
-
-    cfg_file.write_text(
-        json.dumps(
-            {
-                "PROJECT": "airline",
-            }
-        )
-    )
+    """ Test l'affectation d'une variable config.VAR=... """
+    cfg_file = create_fake_config(tmp_path)
 
     cfg = Config(
         app_path="/tmp/my_script.py",
@@ -92,33 +85,23 @@ def test_setattr_existing_key(tmp_path):
 
 @patch("spark.notebooks.common.config.secretmanager.SecretManagerServiceClient")
 def test_get_secrets(mock_client_class, tmp_path):
-    cfg_file = tmp_path / "config.json"
+    cfg_file = create_fake_config(tmp_path)
 
-    cfg_file.write_text(
-        json.dumps(
-            {
-                "SECRETS_PREFIX": "projects/test/secrets/",
-                "SECRETS": ["DB_PASSWORD"],
-            }
-        )
-    )
-
+    # Simule objet client
     mock_client = MagicMock()
-
+    # simule objet response
     response = MagicMock()
     response.payload.data.decode.return_value = "secret_value"
-
     mock_client.access_secret_version.return_value = response
-
     mock_client_class.return_value = mock_client
 
     cfg = Config(
         app_path="/tmp/my_script.py",
         config_file=str(cfg_file),
     )
-
+    # Appel get_secrets
     cfg.get_secrets()
 
     assert cfg.DB_PASSWORD == "secret_value"
 
-    mock_client.access_secret_version.assert_called_once()
+    

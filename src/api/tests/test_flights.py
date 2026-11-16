@@ -13,12 +13,12 @@ BASE = {
 
 
 def test_search_defaults_are_not_tuples():
-    """Régression : des virgules finales faisaient de limit/flight_date des tuples."""
+    """Test de Régression : des virgules finales faisaient de limit/flight_date des tuples."""
     s = FlightSearch()
     assert s.limit == 100 and s.offset == 0 and s.flight_date is None
 
 
-@pytest.mark.parametrize("missing", ["origin_airport", "destination_airport", "flight_date", "airline_name"])
+@pytest.mark.parametrize("missing", ["origin_airport", "destination_airport", "flight_date", "airline_name"])   # on passe la liste des parametres a controler
 def test_missing_required_param_returns_422(client, missing):
     """Chaque paramètre obligatoire manquant renvoie 422 (et non un 500)."""
     body = {k: v for k, v in BASE.items() if k != missing}
@@ -26,13 +26,13 @@ def test_missing_required_param_returns_422(client, missing):
 
 
 def test_bad_date_format_returns_422(client):
-    """La date doit être au format YYYY-MM-DD."""
+    """La date doit être au format YYYY-MM-DD. On test avec DD-MM-YYYY et ca doit planter """
     r = client.post("/flights", json={**BASE, "flight_date": "08/11/2026"})
     assert r.status_code == 422
 
 
 def test_limit_is_bounded(client):
-    """limit doit rester entre 1 et 1000."""
+    """limit doit rester entre 1 et 100000."""
     assert client.post("/flights", json={**BASE, "limit": 0}).status_code == 422
     assert client.post("/flights", json={**BASE, "limit": 100000}).status_code == 422
 
