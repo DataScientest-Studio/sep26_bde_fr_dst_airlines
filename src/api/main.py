@@ -6,7 +6,9 @@ from fastapi import Depends, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text, bindparam
 from sqlalchemy.orm import Session
+import logging
 import os
+import re
 import shutil
 
 from api.config import settings
@@ -25,7 +27,8 @@ from api.schemas import (
     ModelInfo
 )
 from api.security import verify_api_key
-import random
+
+logger = logging.getLogger(__name__)
 
 
 # Charge le model en cache au demarrage de l'API
@@ -45,21 +48,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["X-API-Key", "Content-Type"],
 )
 
 
 @app.post("/predict", response_model=PredictionOutput, tags=["ML Inference"])
-def predict_single_flight(payload: FlightPredictionInput,
-                    db: Session = Depends(get_db),):
+def predict_single_flight(payload: FlightPredictionInput):
     """Prédit le retard d'un vol unique avec le modèle Scikit-Learn."""
     return ml_manager.predict([payload])[0]
-    #retard=random.random() > 0.8
-    #r = PredictionOutput(predicted_delay_minutes=random.random()*30 if retard else 0, is_delayed=retard, delay_probability=random.random() if retard else 1)
-    #return r
 
 
 
@@ -75,90 +74,91 @@ def get_flights(
     db: Session = Depends(get_db),
 ):
 
-    """  Récupère la liste des vols depuis PostgreSQL avec filtres optionnels."""
+    """Récupère la liste des vols depuis PostgreSQL avec filtres."""
+    if (
+        (search.airline_name is None and not search.airline_codes)
+        or search.destination_airport is None
+        or search.origin_airport is None
+        or search.flight_date is None
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Paramètres obligatoires : airline_name ou airline_codes, origin_airport, destination_airport, flight_date.",
+        )
+
     try:
-        if search.flight_date:
-            date_obj = datetime.strptime(search.flight_date,"%Y-%m-%d" ).date()
+        date_obj = datetime.strptime(search.flight_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="flight_date doit être au format YYYY-MM-DD.")
 
-            dow = (date_obj.weekday() + 1) % 8  # Start Sunday
-            day = date_obj.day
-            month = date_obj.month
-            year= date_obj.year
+    # Postgres EXTRACT(DOW) : dimanche = 0 ... samedi = 6
+    dow = (date_obj.weekday() + 1) % 7
 
-        if search.airline_codes is not None and len(search.airline_codes)>0:
-            code_cond = " AND (al.icao_code IN :airline_codes)"
-        else:
-            code_cond =''
-        query = f"""
-            SELECT
-                f.flight_id,
-                f.flight_icao, 
-                al.icao_code as airline_icao, 
-                al.iata_code AS airline_iata,
-                al.airline_name,
-                f.flight_number, 
-                da.icao_code as dep_icao, 
-                aa.icao_code as arr_icao, 
-                da.iata_code as dep_iata, 
-                aa.iata_code as arr_iata, 
-                f.dep_time,
-                f.arr_time,
-                f.dow,
-                :day as day,
-                :month as month,
-                :year as year,
-                :flight_date as flight_date,
-                da.country_code AS dep_country,
-                da.lat AS dep_lat,
-                da.lng as dep_lng,
-                aa.country_code AS arr_country,
-                aa.lat  AS arr_lat,
-                aa.lng  AS arr_lng
-            FROM gold.dim_flights f
-            INNER JOIN gold.dim_airlines al ON f.airline_id=al.airline_id
-            INNER JOIN gold.dim_airports da ON f.dep_airport_id=da.airport_id
-            INNER JOIN gold.dim_airports aa ON f.arr_airport_id=aa.airport_id
-            WHERE (:airline_name IS NULL OR al.airline_name ILIKE :airline_name)
-            AND (:origin_airport IS NULL OR da.iata_code = :origin_airport)
-            AND (:destination_airport IS NULL OR aa.iata_code  = :destination_airport)
-            AND ((:start_hour IS NULL OR dep_time >= :start_hour) AND (:end_hour IS NULL OR dep_time < :end_hour))
-            AND (:dow IS NULL OR dow = :dow)
-            {code_cond}
-            ORDER BY dep_time DESC NULLS LAST
-            LIMIT :limit OFFSET :offset
-        """
+    code_cond = " AND (al.icao_code IN :airline_codes)" if search.airline_codes else ""
+    query = f"""
+        SELECT
+            f.flight_id,
+            f.flight_icao,
+            al.icao_code as airline_icao,
+            al.iata_code AS airline_iata,
+            al.airline_name,
+            f.flight_number,
+            da.icao_code as dep_icao,
+            aa.icao_code as arr_icao,
+            da.iata_code as dep_iata,
+            aa.iata_code as arr_iata,
+            f.dep_time,
+            f.arr_time,
+            f.dow,
+            :day as day,
+            :month as month,
+            :year as year,
+            :flight_date as flight_date,
+            da.country_code AS dep_country,
+            da.lat AS dep_lat,
+            da.lng as dep_lng,
+            aa.country_code AS arr_country,
+            aa.lat  AS arr_lat,
+            aa.lng  AS arr_lng
+        FROM gold.dim_flights f
+        INNER JOIN gold.dim_airlines al ON f.airline_id=al.airline_id
+        INNER JOIN gold.dim_airports da ON f.dep_airport_id=da.airport_id
+        INNER JOIN gold.dim_airports aa ON f.arr_airport_id=aa.airport_id
+        WHERE (:airline_name IS NULL OR al.airline_name ILIKE :airline_name)
+        AND (:origin_airport IS NULL OR da.iata_code = :origin_airport)
+        AND (:destination_airport IS NULL OR aa.iata_code  = :destination_airport)
+        AND ((:start_hour IS NULL OR dep_time >= :start_hour) AND (:end_hour IS NULL OR dep_time < :end_hour))
+        AND (:dow IS NULL OR dow = :dow)
+        {code_cond}
+        ORDER BY dep_time DESC NULLS LAST
+        LIMIT :limit OFFSET :offset
+    """
 
-        if (search.airline_name is None and search.airline_codes is None) or search.destination_airport is None or search.origin_airport is None or search.flight_date is None : raise HTTPException("Manque un paramètre obligatoire")
+    params = {
+        "airline_codes": search.airline_codes,
+        "airline_name": f"%{search.airline_name}%" if search.airline_name else None,
+        "origin_airport": search.origin_airport,
+        "destination_airport": search.destination_airport,
+        "start_hour": f"{search.start_hour:02d}:00" if search.start_hour is not None else None,
+        "end_hour": f"{search.end_hour:02d}:00" if search.end_hour is not None else None,
+        "limit": search.limit,
+        "offset": search.offset,
+        "dow": dow,
+        "day": date_obj.day,
+        "month": date_obj.month,
+        "year": date_obj.year,
+        "flight_date": search.flight_date,
+    }
+    stmt = text(query)
+    if search.airline_codes:
+        stmt = stmt.bindparams(bindparam("airline_codes", expanding=True))
 
-        params = {
-                        "airline_codes": search.airline_codes if search.airline_codes is not None else None,
-                        "airline_name": f"'%{search.airline_name}%'" if search.airline_name else None,
-                        "origin_airport": search.origin_airport,
-                        "destination_airport": search.destination_airport,
-                        "start_hour": f"{search.start_hour:02d}:00",
-                        "end_hour":f"{search.end_hour:02d}:00",
-                        "limit": search.limit,
-                        "offset": search.offset,
-                        "dow":dow,
-                        "day":day,
-                        "month":month,
-                        "year":year,
-                        "flight_date":search.flight_date
-                    }
-        stmt = text(query)
-        if search.airline_codes:
-            stmt = stmt.bindparams(
-                bindparam("airline_codes", expanding=True)
-            )
-        rows = db.execute(
-            stmt,
-            params
-        ).mappings().all()
-        data=[Flight(**row) for row in rows]
-        return data
-    except Exception as e:
-        print(e.message)
-        raise HTTPException(f"Error getting Flights : {e}")
+    try:
+        rows = db.execute(stmt, params).mappings().all()
+        return [Flight(**row) for row in rows]
+    except Exception:
+        logger.exception("Erreur lors de la récupération des vols")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération des vols.")
 
 
 @app.get("/airports", response_model=List[Airport], tags=["Reference Data"])
@@ -184,7 +184,8 @@ def get_airports(
         rows = db.execute(text(query), {"search": search, "pattern": pattern, "country":country}).mappings().all()
         return [Airport(**row) for row in rows]
     except Exception as e:
-        raise HTTPException(detail=f"Error getting Airports : {e}")
+        logger.exception("Erreur lors de la récupération des aéroports")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération des aéroports.")
 
 
 @app.get("/airlines", response_model=List[Airline], tags=["Reference Data"])
@@ -199,7 +200,8 @@ def get_airlines(search: Optional[str] = Query(None),db: Session = Depends(get_d
         rows = db.execute(text(query),{"search": search, "pattern": pattern}).mappings().all()
         return [Airline(**row) for row in rows]
     except Exception as e:
-        raise HTTPException(detail=f"Error getting Airlines : {e}")
+        logger.exception("Erreur lors de la récupération des compagnies")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération des compagnies.")
 
 
 @app.get("/stats/hour", response_model=List[DelayStats], tags=["Analytics"])
@@ -236,6 +238,8 @@ def get_models(db: Session = Depends(get_db)):
 @app.post("/models/{model_name}/deploy", tags=["ML Inference"])
 def deploy_model(model_name: str, db: Session = Depends(get_db)):
     """Deploy a model from ml.model_runs and reload it in the API."""
+    if not re.fullmatch(r"[A-Za-z0-9_\-]+", model_name):
+        raise HTTPException(status_code=422, detail="Nom de modèle invalide.")
     row = db.execute(
         text("SELECT model_name FROM ml.model_runs WHERE model_name = :name"),
         {"name": model_name},
