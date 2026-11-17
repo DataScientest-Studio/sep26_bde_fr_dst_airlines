@@ -18,7 +18,7 @@ def test_search_defaults_are_not_tuples():
     assert s.limit == 100 and s.offset == 0 and s.flight_date is None
 
 
-@pytest.mark.parametrize("missing", ["origin_airport", "destination_airport", "flight_date", "airline_name"])   # on passe la liste des parametres a controler
+@pytest.mark.parametrize("missing", ["origin_airport", "destination_airport", "flight_date"])   # on passe la liste des parametres a controler (airline_name est optionel suite à fix bug)
 def test_missing_required_param_returns_422(client, missing):
     """Chaque paramètre obligatoire manquant renvoie 422 (et non un 500)."""
     body = {k: v for k, v in BASE.items() if k != missing}
