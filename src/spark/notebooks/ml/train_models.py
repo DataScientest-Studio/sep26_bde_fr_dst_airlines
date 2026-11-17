@@ -3,19 +3,6 @@
 """
 Train delay prediction models (scikit-learn) and store their scores.
 
-Steps:
-  1. Read config and secrets (shared config.json of the ingestion folder)
-  2. Read gold.ml_flights_features into a pandas DataFrame
-  3. Prepare data: drop flights without weather (arrival or departure), train/test split by random whole days
-     (no day shared between train and test), preprocessing (one-hot for categories,
-     numeric columns passed through)
-  4. Train a RandomForest and an XGBoost, each in a Pipeline (preprocessing + model),
-     named type_YYYYMMDD_HHMM
-  5. Evaluate each model on the test set: confusion matrix (TP, FP, TN, FN),
-     precision, recall, F1 (delay class) and ROC AUC
-  6. Save each fitted pipeline with joblib in MODELS_DIR as <model_name>.joblib
-  7. Store one row per model in RESULTS_TABLE (created if needed, readable by airline_rw).
-     deployed_at and online are left empty / false: they are set by deploy_model.py
 """
 from pathlib import Path
 import os, sys
@@ -46,7 +33,7 @@ from sklearn.metrics import (
 is_local = os.getenv("RUN_ENV") != "docker"
 
 CONFIG_FILE = str(Path(__file__).resolve().parent.parent / "ingestion" / "config.json")
-FEATURES_TABLE = "gold.ml_flights_features"
+FEATURES_TABLE = "marts.mrt_ml_flights_features"
 MODELS_DIR = Path("/app/workspace/models")
 RESULTS_TABLE = "ml.model_runs"
 
