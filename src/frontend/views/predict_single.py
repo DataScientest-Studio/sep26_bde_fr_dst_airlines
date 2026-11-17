@@ -74,7 +74,7 @@ def render() -> None:
     if submitted:
 
         try:
-
+            st.session_state.df = pd.DataFrame()  # Remove old data when do a new search
             with st.spinner("Recherche des vols..."):
 
                 result = api_client.get_flights(
@@ -136,7 +136,7 @@ def render() -> None:
             )
 
     # affichage permanent du tableau
-    if not st.session_state.df.empty:
+    if st.session_state is not None and st.session_state.df is not None and  not st.session_state.df.empty:
 
         st.subheader(
             f"{len(st.session_state.df)} vol(s) trouvé(s)"
