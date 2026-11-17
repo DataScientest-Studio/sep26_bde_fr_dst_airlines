@@ -62,10 +62,10 @@ def predict_single_flight(payload: FlightPredictionInput):
 
 
 
-@app.post("/predict-batch", response_model=BatchPredictionOutput, tags=["ML Inference"])
-def predict_batch_flights(payload: BatchPredictionInput):
-    """Prédit les retards pour un lot de vols en une seule requête."""
-    return BatchPredictionOutput(predictions=ml_manager.predict(payload.flights))
+# @app.post("/predict-batch", response_model=BatchPredictionOutput, tags=["ML Inference"])
+# def predict_batch_flights(payload: BatchPredictionInput):
+#     """Prédit les retards pour un lot de vols en une seule requête."""
+#     return BatchPredictionOutput(predictions=ml_manager.predict(payload.flights))
 
 
 @app.post("/flights", response_model=List[Flight], tags=["Flights Data"])
@@ -76,8 +76,8 @@ def get_flights(
 
     """Récupère la liste des vols depuis PostgreSQL avec filtres."""
     if (
-        (search.airline_name is None and not search.airline_codes)
-        or search.destination_airport is None
+        #(search.airline_name is None and not search.airline_codes) or
+        search.destination_airport is None
         or search.origin_airport is None
         or search.flight_date is None
     ):

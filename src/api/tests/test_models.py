@@ -64,19 +64,7 @@ def test_predict_single(client, monkeypatch):
     assert body["delay_probability"] == pytest.approx(0.7)
 
 
-def test_predict_batch(client, monkeypatch):
-    """Un lot de 2 vols renvoie 2 prédictions."""
-    monkeypatch.setattr(ml_manager, "model", DummyModel())
-    r = client.post("/predict-batch", json={"flights": [FLIGHT, FLIGHT]})
-    assert r.status_code == 200
-    assert len(r.json()["predictions"]) == 2
 
-
-def test_predict_empty_batch(client, monkeypatch):
-    """Un lot vide renvoie une liste vide, sans erreur."""
-    monkeypatch.setattr(ml_manager, "model", DummyModel())
-    r = client.post("/predict-batch", json={"flights": []})
-    assert r.json() == {"predictions": []}
 
 
 def test_build_features_columns():
