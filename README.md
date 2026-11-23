@@ -289,4 +289,7 @@ GitHub Actions est utilisé pour :
 
 Mentor : Nicolas FRADIN
 
-Documentation détaillée : [docs/DOCUMENTATION_TECHNIQUE.md](docs/DOCUMENTATION_TECHNIQUE.md)
+## Documents
+- Présentation : [docs/Projet Liora DE Sep26 - Presentation soutenance.pptx](docs/Projet Liora DE Sep26 - Presentation soutenance.pptx)
+- Rapport : [docs/Projet Liora Airline - Rapport.docx](docs/Projet Liora Airline - Rapport.docx)
+- Documentation technique détaillée : [docs/DOCUMENTATION_TECHNIQUE.md](docs/DOCUMENTATION_TECHNIQUE.md)
